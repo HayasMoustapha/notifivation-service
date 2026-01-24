@@ -11,6 +11,7 @@ const morgan = require('morgan');
 const logger = require('./utils/logger');
 const healthRoutes = require('./health/health.routes');
 const notificationsRoutes = require('./api/routes/notifications.routes');
+const migrator = require('./database/migrator');
 
 /**
  * Serveur principal du Notification Service
@@ -302,23 +303,40 @@ class NotificationServer {
   /**
    * Démarre le serveur
    */
-  start() {
-    this.server = this.app.listen(this.port, () => {
-      logger.info(`Notification Service started successfully`, {
-        port: this.port,
-        environment: process.env.NODE_ENV || 'development',
-        version: process.env.npm_package_version || '1.0.0',
-        pid: process.pid,
-        capabilities: {
-          email: true,
-          sms: true,
-          bulk: true,
-          webhooks: true,
-          templates: true,
-          metrics: process.env.ENABLE_METRICS === 'true'
-        }
+  async start() {
+    try {
+      // Run database migrations first
+      logger.info('🔄 Running database migrations...');
+      const migrationResult = await migrator.migrate();
+      
+      if (migrationResult.executed > 0) {
+        logger.info(`✅ Successfully executed ${migrationResult.executed} migrations`);
+      } else {
+        logger.info('✅ Database is up to date');
+      }
+
+      logger.info('🚀 Starting Notification Service server...');
+      
+      this.server = this.app.listen(this.port, () => {
+        logger.info(`Notification Service started successfully`, {
+          port: this.port,
+          environment: process.env.NODE_ENV || 'development',
+          version: process.env.npm_package_version || '1.0.0',
+          pid: process.pid,
+          capabilities: {
+            email: true,
+            sms: true,
+            bulk: true,
+            webhooks: true,
+            templates: true,
+            metrics: process.env.ENABLE_METRICS === 'true'
+          }
+        });
       });
-    });
+    } catch (error) {
+      logger.error('❌ Failed to start server:', error);
+      process.exit(1);
+    }
 
     this.server.on('error', (error) => {
       if (error.syscall !== 'listen') {
@@ -384,7 +402,10 @@ class NotificationServer {
 // Démarrer le serveur si ce fichier est exécuté directement
 if (require.main === module) {
   const server = new NotificationServer();
-  server.start();
+  server.start().catch(error => {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  });
 }
 
 module.exports = NotificationServer;

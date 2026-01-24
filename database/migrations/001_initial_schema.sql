@@ -1,10 +1,6 @@
 -- Notification Service Database Schema
 -- Based on notification-diagram.md
 
--- Create database if not exists
-CREATE DATABASE IF NOT EXISTS event_planner_notifications;
-\c event_planner_notifications;
-
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
