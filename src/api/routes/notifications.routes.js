@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const notificationsController = require('../controllers/notifications.controller');
-const { authenticate, requireAPIKey, requireWebhookSecret } = require('../../middleware/auth');
-const { requirePermission } = require('../../middleware/rbac');
+const { authenticate, requireAPIKey, requireWebhookSecret } = require('../../../shared');
+const { requirePermission } = require('../../../shared');
 const { validate, schemas } = require('../../middleware/validation');
 const logger = require('../../utils/logger');
 const { errorResponse } = require('../../utils/response');
