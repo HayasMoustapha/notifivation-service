@@ -12,7 +12,7 @@ const { errorResponse } = require('../../utils/response');
  */
 
 // Middleware d'authentification pour la plupart des routes
-// router.use(authenticate);
+router.use(authenticate);
 
 // POST /api/notifications/email - Envoyer un email transactionnel
 router.post('/email',
