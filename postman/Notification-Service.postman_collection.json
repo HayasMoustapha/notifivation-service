@@ -1,0 +1,912 @@
+{
+	"info": {
+		"_postman_id": "notification-service-collection",
+		"name": "Notification Service API",
+		"description": "Complete API collection for Event Planner Notification Service - Email/SMS transactional notifications with Redis queues",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Checks",
+			"item": [
+				{
+					"name": "Simple Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health",
+							"host": ["{{baseUrl}}"],
+							"path": ["health"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Detailed Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health/detailed",
+							"host": ["{{baseUrl}}"],
+							"path": ["health", "detailed"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Readiness Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health/ready",
+							"host": ["{{baseUrl}}"],
+							"path": ["health", "ready"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Liveness Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health/live",
+							"host": ["{{baseUrl}}"],
+							"path": ["health", "live"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Email Service Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health/components/email",
+							"host": ["{{baseUrl}}"],
+							"path": ["health", "components", "email"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "SMS Service Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health/components/sms",
+							"host": ["{{baseUrl}}"],
+							"path": ["health", "components", "sms"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Queue Service Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health/components/queues",
+							"host": ["{{baseUrl}}"],
+							"path": ["health", "components", "queues"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Providers Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health/providers",
+							"host": ["{{baseUrl}}"],
+							"path": ["health", "providers"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Queue Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health/queues/stats",
+							"host": ["{{baseUrl}}"],
+							"path": ["health", "queues", "stats"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Email Notifications",
+			"item": [
+				{
+					"name": "Send Transactional Email",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": \"user@example.com\",\n  \"subject\": \"Welcome to Event Planner\",\n  \"template\": \"welcome_email\",\n  \"data\": {\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"email\": \"user@example.com\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/email/send",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "email", "send"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Custom Email",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": \"user@example.com\",\n  \"subject\": \"Custom Subject\",\n  \"html\": \"<h1>Hello {{firstName}}</h1><p>This is a custom email.</p>\",\n  \"text\": \"Hello {{firstName}}, This is a custom email.\",\n  \"data\": {\n    \"firstName\": \"John\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/email/send-custom",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "email", "send-custom"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Queue Email",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": \"user@example.com\",\n  \"subject\": \"Queued Email\",\n  \"template\": \"welcome_email\",\n  \"data\": {\n    \"firstName\": \"John\"\n  },\n  \"options\": {\n    \"delay\": 5000,\n    \"priority\": \"normal\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/email/queue",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "email", "queue"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Bulk Emails",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"emails\": [\n    {\n      \"to\": \"user1@example.com\",\n      \"subject\": \"Bulk Email 1\",\n      \"template\": \"welcome_email\",\n      \"data\": {\"firstName\": \"User1\"}\n    },\n    {\n      \"to\": \"user2@example.com\",\n      \"subject\": \"Bulk Email 2\",\n      \"template\": \"welcome_email\",\n      \"data\": {\"firstName\": \"User2\"}\n    }\n  ],\n  \"options\": {\n    \"concurrency\": 5,\n    \"delay\": 1000\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/email/bulk",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "email", "bulk"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "SMS Notifications",
+			"item": [
+				{
+					"name": "Send Transactional SMS",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": \"+1234567890\",\n  \"template\": \"welcome_sms\",\n  \"data\": {\n    \"firstName\": \"John\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/sms/send",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "sms", "send"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Custom SMS",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": \"+1234567890\",\n  \"message\": \"Hello {{firstName}}, this is a custom SMS message.\",\n  \"data\": {\n    \"firstName\": \"John\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/sms/send-custom",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "sms", "send-custom"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Queue SMS",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": \"+1234567890\",\n  \"template\": \"welcome_sms\",\n  \"data\": {\n    \"firstName\": \"John\"\n  },\n  \"options\": {\n    \"delay\": 5000,\n    \"priority\": \"high\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/sms/queue",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "sms", "queue"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Bulk SMS",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"messages\": [\n    {\n      \"to\": \"+1234567890\",\n      \"template\": \"welcome_sms\",\n      \"data\": {\"firstName\": \"User1\"}\n    },\n    {\n      \"to\": \"+1234567891\",\n      \"template\": \"welcome_sms\",\n      \"data\": {\"firstName\": \"User2\"}\n    }\n  ],\n  \"options\": {\n    \"concurrency\": 3,\n    \"delay\": 2000\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/sms/bulk",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "sms", "bulk"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Bulk Notifications",
+			"item": [
+				{
+					"name": "Send Mixed Bulk Notifications",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"notifications\": [\n    {\n      \"type\": \"email\",\n      \"to\": \"user1@example.com\",\n      \"subject\": \"Welcome Email\",\n      \"template\": \"welcome_email\",\n      \"data\": {\"firstName\": \"User1\"}\n    },\n    {\n      \"type\": \"sms\",\n      \"to\": \"+1234567890\",\n      \"template\": \"welcome_sms\",\n      \"data\": {\"firstName\": \"User2\"}\n    }\n  ],\n  \"options\": {\n    \"concurrency\": 5,\n    \"delay\": 1000\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/bulk",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "bulk"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Job Management",
+			"item": [
+				{
+					"name": "Get Job Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/jobs/{{jobId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "jobs", "{{jobId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Job",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/jobs/{{jobId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "jobs", "{{jobId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Queue Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/queues/stats",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "queues", "stats"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Clean Completed Jobs",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"state\": \"completed\",\n  \"age\": 3600\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/queues/cleanup",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "queues", "cleanup"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Specialized Endpoints",
+			"item": [
+				{
+					"name": "Send Welcome Email",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": \"user@example.com\",\n  \"data\": {\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"email\": \"user@example.com\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/email/welcome",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "email", "welcome"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Welcome SMS",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": \"+1234567890\",\n  \"data\": {\n    \"firstName\": \"John\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/sms/welcome",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "sms", "welcome"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Password Reset Email",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": \"user@example.com\",\n  \"data\": {\n    \"firstName\": \"John\",\n    \"resetUrl\": \"https://eventplanner.com/reset-password?token=abc123\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/email/password-reset",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "email", "password-reset"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Password Reset SMS",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": \"+1234567890\",\n  \"data\": {\n    \"resetUrl\": \"https://eventplanner.com/reset-password?token=abc123\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/sms/password-reset",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "sms", "password-reset"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Event Confirmation Email",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": \"user@example.com\",\n  \"data\": {\n    \"firstName\": \"John\",\n    \"eventTitle\": \"Tech Conference 2024\",\n    \"eventDate\": \"2024-03-15\",\n    \"eventLocation\": \"Convention Center\",\n    \"ticketType\": \"VIP\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/email/event-confirmation",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "email", "event-confirmation"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Event Confirmation SMS",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": \"+1234567890\",\n  \"data\": {\n    \"eventTitle\": \"Tech Conference 2024\",\n    \"eventDate\": \"2024-03-15\",\n    \"eventLocation\": \"Convention Center\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/sms/event-confirmation",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "sms", "event-confirmation"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send OTP SMS",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": \"+1234567890\",\n  \"data\": {\n    \"otp\": \"123456\",\n    \"purpose\": \"login\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/sms/otp",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "sms", "otp"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Templates & Preferences",
+			"item": [
+				{
+					"name": "Create Custom Template",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"custom_welcome\",\n  \"type\": \"welcome\",\n  \"channel\": \"email\",\n  \"subject_template\": \"Welcome {{firstName}} to Our Platform!\",\n  \"body_template\": \"<h1>Hello {{firstName}} {{lastName}}</h1><p>Welcome to our amazing platform!</p>\",\n  \"variables\": {\n    \"firstName\": \"string\",\n    \"lastName\": \"string\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/templates",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "templates"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Templates",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/templates",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "templates"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update User Preferences",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"preferences\": {\n    \"email\": true,\n    \"sms\": false,\n    \"push\": true,\n    \"in_app\": true\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/preferences/{{userId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "preferences", "{{userId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Preferences",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/preferences/{{userId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "preferences", "{{userId}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Webhooks",
+			"item": [
+				{
+					"name": "Email Webhook",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Webhook-Signature",
+								"value": "{{webhookSignature}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event\": \"email.delivered\",\n  \"data\": {\n    \"notificationId\": \"uuid-123\",\n    \"to\": \"user@example.com\",\n    \"status\": \"delivered\",\n    \"timestamp\": \"2024-01-23T10:00:00Z\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/webhooks/email",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "webhooks", "email"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "SMS Webhook",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Webhook-Signature",
+								"value": "{{webhookSignature}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event\": \"sms.delivered\",\n  \"data\": {\n    \"notificationId\": \"uuid-456\",\n    \"to\": \"+1234567890\",\n    \"status\": \"delivered\",\n    \"timestamp\": \"2024-01-23T10:00:00Z\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/webhooks/sms",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "webhooks", "sms"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Service Info",
+			"item": [
+				{
+					"name": "Service Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/stats",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "stats"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Service Health",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/health",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "health"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "API Root",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api",
+							"host": ["{{baseUrl}}"],
+							"path": ["api"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Service Root",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/",
+							"host": ["{{baseUrl}}"],
+							"path": [""]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3002"
+		},
+		{
+			"key": "authToken",
+			"value": "your-jwt-token-here"
+		},
+		{
+			"key": "jobId",
+			"value": "sample-job-id"
+		},
+		{
+			"key": "userId",
+			"value": "sample-user-id"
+		},
+		{
+			"key": "webhookSignature",
+			"value": "sample-webhook-signature"
+		}
+	]
+}
