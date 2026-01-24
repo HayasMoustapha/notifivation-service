@@ -26,7 +26,7 @@ class EmailService {
     try {
       // Initialiser Nodemailer (SMTP)
       if (this.isSMTPConfigured()) {
-        this.smtpTransporter = nodemailer.createTransporter({
+        this.smtpTransporter = nodemailer.createTransport({
           host: process.env.SMTP_HOST,
           port: parseInt(process.env.SMTP_PORT) || 587,
           secure: process.env.SMTP_SECURE === 'true',
