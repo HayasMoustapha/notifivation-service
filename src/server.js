@@ -5,7 +5,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
-const { ipKeyGenerator } = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const morgan = require('morgan');
 
@@ -95,10 +94,6 @@ class NotificationServer {
         error: {
           code: 'EMAIL_RATE_LIMIT_EXCEEDED'
         }
-      },
-      keyGenerator: (req) => {
-        // Utiliser l'ID utilisateur si authentifié, sinon l'IP avec gestion IPv6 sécurisée
-        return req.user?.id || ipKeyGenerator(req);
       }
     });
     this.app.use('/api/notifications/email', emailLimiter);
@@ -113,10 +108,6 @@ class NotificationServer {
         error: {
           code: 'SMS_RATE_LIMIT_EXCEEDED'
         }
-      },
-      keyGenerator: (req) => {
-        // Utiliser l'ID utilisateur si authentifié, sinon l'IP avec gestion IPv6 sécurisée
-        return req.user?.id || ipKeyGenerator(req);
       }
     });
     this.app.use('/api/notifications/sms', smsLimiter);
@@ -223,7 +214,7 @@ class NotificationServer {
     }
 
     // Route 404
-    this.app.use('*', (req, res) => {
+    this.app.use((req, res) => {
       res.status(404).json({
         success: false,
         message: 'Route non trouvée',
