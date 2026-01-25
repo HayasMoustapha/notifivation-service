@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const notificationsController = require('../controllers/notifications.controller');
-const { authenticate, requireAPIKey, requireWebhookSecret } = require('../../../../shared');
-const { requirePermission } = require('../../../../shared');
+const { authenticate, requirePermission, requireAPIKey, requireWebhookSecret } = require('../../../../shared');
 const { validate, schemas } = require('../../middleware/validation');
 const logger = require('../../utils/logger');
 const { errorResponse } = require('../../utils/response');
@@ -281,5 +280,42 @@ router.post('/integrations/github',
     }
   }
 );
+
+// Route d'information pour le service
+router.get('/', (req, res) => {
+  res.json({
+    service: 'Notification API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      email: 'POST /api/notifications/email',
+      sms: 'POST /api/notifications/sms',
+      emailQueue: 'POST /api/notifications/email/queue',
+      smsQueue: 'POST /api/notifications/sms/queue',
+      emailBulk: 'POST /api/notifications/email/bulk',
+      smsBulk: 'POST /api/notifications/sms/bulk',
+      mixedBulk: 'POST /api/notifications/bulk/mixed',
+      jobStatus: 'GET /api/notifications/job/:jobId/status',
+      cancelJob: 'DELETE /api/notifications/job/:jobId/cancel',
+      queueStats: 'GET /api/notifications/queues/stats',
+      queueClean: 'POST /api/notifications/queues/clean',
+      welcomeEmail: 'POST /api/notifications/welcome/email',
+      welcomeSMS: 'POST /api/notifications/welcome/sms',
+      passwordResetEmail: 'POST /api/notifications/password-reset/email',
+      passwordResetSMS: 'POST /api/notifications/password-reset/sms',
+      eventConfirmationEmail: 'POST /api/notifications/event-confirmation/email',
+      eventConfirmationSMS: 'POST /api/notifications/event-confirmation/sms',
+      otpSMS: 'POST /api/notifications/otp/sms',
+      health: 'GET /api/notifications/health',
+      stats: 'GET /api/notifications/stats',
+      webhookEmail: 'POST /api/notifications/webhooks/email',
+      webhookSMS: 'POST /api/notifications/webhooks/sms',
+      webhookBulk: 'POST /api/notifications/webhooks/bulk',
+      integrationStripe: 'POST /api/notifications/integrations/stripe',
+      integrationGithub: 'POST /api/notifications/integrations/github'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
 
 module.exports = router;
