@@ -5,6 +5,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const morgan = require('morgan');
 
@@ -96,8 +97,8 @@ class NotificationServer {
         }
       },
       keyGenerator: (req) => {
-        // Utiliser l'ID utilisateur si authentifié, sinon l'IP
-        return req.user?.id || req.ip;
+        // Utiliser l'ID utilisateur si authentifié, sinon l'IP avec gestion IPv6 sécurisée
+        return req.user?.id || ipKeyGenerator(req);
       }
     });
     this.app.use('/api/notifications/email', emailLimiter);
@@ -114,8 +115,8 @@ class NotificationServer {
         }
       },
       keyGenerator: (req) => {
-        // Utiliser l'ID utilisateur si authentifié, sinon l'IP
-        return req.user?.id || req.ip;
+        // Utiliser l'ID utilisateur si authentifié, sinon l'IP avec gestion IPv6 sécurisée
+        return req.user?.id || ipKeyGenerator(req);
       }
     });
     this.app.use('/api/notifications/sms', smsLimiter);
