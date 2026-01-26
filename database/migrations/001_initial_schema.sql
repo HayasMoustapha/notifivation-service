@@ -12,11 +12,11 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
--- Table des notifications
+-- Table des notifications (avec champs audit complets)
 CREATE TABLE IF NOT EXISTS notifications (
     id BIGSERIAL PRIMARY KEY,
     uid UUID NOT NULL DEFAULT gen_random_uuid(),
-    user_id BIGINT NOT NULL,
+    user_id BIGINT, -- Référence externe au service auth
     type VARCHAR(100) NOT NULL,
     channel notification_channel NOT NULL,
     subject VARCHAR(255),
@@ -24,11 +24,16 @@ CREATE TABLE IF NOT EXISTS notifications (
     status notification_status DEFAULT 'pending',
     sent_at TIMESTAMP,
     read_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    -- Champs d'audit complets
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by BIGINT,
+    updated_by BIGINT,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    deleted_by BIGINT
 );
 
--- Table des templates de notification
+-- Table des templates de notification (avec champs audit complets)
 CREATE TABLE IF NOT EXISTS notification_templates (
     id BIGSERIAL PRIMARY KEY,
     uid UUID NOT NULL DEFAULT gen_random_uuid(),
@@ -38,23 +43,34 @@ CREATE TABLE IF NOT EXISTS notification_templates (
     body_template TEXT,
     variables JSONB,
     is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    -- Champs d'audit complets
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by BIGINT,
+    updated_by BIGINT,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    deleted_by BIGINT
 );
 
--- Table des préférences de notification
+-- Table des préférences de notification (avec champs audit complets)
 CREATE TABLE IF NOT EXISTS notification_preferences (
     id BIGSERIAL PRIMARY KEY,
     uid UUID NOT NULL DEFAULT gen_random_uuid(),
-    user_id BIGINT NOT NULL,
+    user_id BIGINT, -- Référence externe au service auth
     channel notification_channel NOT NULL,
     is_enabled BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Champs d'audit complets
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by BIGINT,
+    updated_by BIGINT,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    deleted_by BIGINT,
+    -- Contrainte unique
     UNIQUE(user_id, channel)
 );
 
--- Table des logs de notification
+-- Table des logs de notification (avec champs audit complets)
 CREATE TABLE IF NOT EXISTS notification_logs (
     id BIGSERIAL PRIMARY KEY,
     uid UUID NOT NULL DEFAULT gen_random_uuid(),
@@ -63,29 +79,39 @@ CREATE TABLE IF NOT EXISTS notification_logs (
     response JSONB,
     error_message TEXT,
     status VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    -- Champs d'audit
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by BIGINT
 );
 
--- Index pour optimiser les performances
-CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
-CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status);
-CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
-CREATE INDEX IF NOT EXISTS idx_notification_templates_name ON notification_templates(name);
-CREATE INDEX IF NOT EXISTS idx_notification_templates_channel ON notification_templates(channel);
-CREATE INDEX IF NOT EXISTS idx_notification_preferences_user_id ON notification_preferences(user_id);
+-- Table de configuration du service (avec champs audit complets)
+CREATE TABLE IF NOT EXISTS service_config (
+    id BIGSERIAL PRIMARY KEY,
+    key VARCHAR(255) UNIQUE NOT NULL,
+    value JSONB,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by BIGINT,
+    updated_by BIGINT,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    deleted_by BIGINT
+);
+
+-- Index pour optimiser les performances (avec filtre deleted_at)
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_notification_templates_name ON notification_templates(name) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_notification_templates_channel ON notification_templates(channel) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_notification_preferences_user_id ON notification_preferences(user_id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_notification_logs_notification_id ON notification_logs(notification_id);
 CREATE INDEX IF NOT EXISTS idx_notification_logs_created_at ON notification_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_service_config_key ON service_config(key) WHERE deleted_at IS NULL;
 
 -- Commentaires pour documentation
-COMMENT ON TABLE notifications IS 'Table principale des notifications';
-COMMENT ON TABLE notification_templates IS 'Templates pour les notifications';
-COMMENT ON TABLE notification_preferences IS 'Préférences utilisateur pour les notifications';
+COMMENT ON TABLE notifications IS 'Table principale des notifications avec champs audit complets';
+COMMENT ON TABLE notification_templates IS 'Templates pour les notifications avec champs audit complets';
+COMMENT ON TABLE notification_preferences IS 'Préférences utilisateur pour les notifications avec champs audit complets';
 COMMENT ON TABLE notification_logs IS 'Logs des envois de notifications';
-
--- Insertion de templates de base
-INSERT INTO notification_templates (name, channel, subject_template, body_template, variables) VALUES 
-('welcome_email', 'email', 'Bienvenue sur Event Planner !', 'Bonjour {{user_name}}, bienvenue sur Event Planner !', '{"user_name": "string"}'),
-('event_confirmation', 'email', 'Confirmation d''événement', 'Votre événement "{{event_title}}" a été confirmé.', '{"event_title": "string", "event_date": "date"}'),
-('ticket_purchased', 'email', 'Achat de ticket', 'Vous avez acheté {{ticket_count}} ticket(s) pour "{{event_title}}".', '{"ticket_count": "number", "event_title": "string"}'),
-('payment_confirmation', 'email', 'Confirmation de paiement', 'Votre paiement de {{amount}}€ a été confirmé.', '{"amount": "number", "currency": "string"}')
-ON CONFLICT (name) DO NOTHING;
+COMMENT ON TABLE service_config IS 'Configuration du service avec champs audit complets';
