@@ -249,10 +249,11 @@ function validate(schema, source = 'body') {
   return (req, res, next) => {
     const data = req[source];
     
+    // Permettre les champs injectés par le contexte
     const { error, value } = schema.validate(data, {
       abortEarly: false,
-      allowUnknown: false,
-      stripUnknown: true
+      allowUnknown: true, // Permettre les champs injectés par le contexte
+      stripUnknown: false // Ne pas supprimer les champs injectés
     });
 
     if (error) {
@@ -274,8 +275,8 @@ function validate(schema, source = 'body') {
       );
     }
 
-    // Remplacer les données validées dans la requête
-    req[source] = value;
+    // Fusionner les données validées avec les données existantes
+    req[source] = { ...req[source], ...value };
     
     logger.validation('Validation passed', {
       source,

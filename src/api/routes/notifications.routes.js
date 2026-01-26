@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const notificationsController = require('../controllers/notifications.controller');
 const { authenticate, requirePermission, requireAPIKey, requireWebhookSecret } = require('../../../../shared');
+const { injectUserContext } = require('../../../../shared/context-middleware');
 const { validate, schemas } = require('../../middleware/validation');
 const logger = require('../../utils/logger');
 const { errorResponse } = require('../../utils/response');
@@ -15,6 +16,8 @@ router.use(authenticate);
 
 // POST /api/notifications/email - Envoyer un email transactionnel
 router.post('/email',
+  authenticate,
+  injectUserContext,
   requirePermission('notifications.email.send'),
   validate(schemas.sendEmail),
   notificationsController.sendEmail
@@ -22,6 +25,8 @@ router.post('/email',
 
 // POST /api/notifications/sms - Envoyer un SMS transactionnel
 router.post('/sms',
+  authenticate,
+  injectUserContext,
   requirePermission('notifications.sms.send'),
   validate(schemas.sendSMS),
   notificationsController.sendSMS
@@ -29,6 +34,8 @@ router.post('/sms',
 
 // POST /api/notifications/email/queue - Mettre en file d'attente un email
 router.post('/email/queue',
+  authenticate,
+  injectUserContext,
   requirePermission('notifications.email.queue'),
   validate(schemas.sendEmail),
   notificationsController.queueEmail
@@ -36,6 +43,8 @@ router.post('/email/queue',
 
 // POST /api/notifications/sms/queue - Mettre en file d'attente un SMS
 router.post('/sms/queue',
+  authenticate,
+  injectUserContext,
   requirePermission('notifications.sms.queue'),
   validate(schemas.sendSMS),
   notificationsController.queueSMS
@@ -43,6 +52,8 @@ router.post('/sms/queue',
 
 // POST /api/notifications/email/bulk - Envoyer des emails en lot
 router.post('/email/bulk',
+  authenticate,
+  injectUserContext,
   requirePermission('notifications.email.bulk'),
   validate(schemas.sendBulkEmail),
   notificationsController.sendBulkEmail
