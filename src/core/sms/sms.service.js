@@ -156,7 +156,14 @@ class SMSService {
       return { success: false, fallback: true, reason: 'No SMS service configured' };
     }
 
-    throw new Error('Tous les services SMS ont échoué');
+    return {
+      success: false,
+      error: 'Tous les services SMS ont échoué',
+      details: {
+        message: 'Aucun service SMS disponible',
+        attempted_services: ['Twilio', 'Vonage', 'Fallback']
+      }
+    };
   }
 
   /**
@@ -190,7 +197,15 @@ class SMSService {
         ip: options.ip
       });
       
-      throw new Error(`Échec d'envoi du SMS transactionnel: ${error.message}`);
+      return {
+        success: false,
+        error: 'Échec d\'envoi du SMS transactionnel',
+        details: {
+          message: error.message,
+          template,
+          recipient: this.maskPhoneNumber(phoneNumber)
+        }
+      };
     }
   }
 
@@ -226,12 +241,20 @@ class SMSService {
       return result;
     } catch (error) {
       logger.error('Failed to queue bulk SMS', {
+        recipientCount: recipients.length,
         template,
-        recipientsCount: recipients.length,
         error: error.message
       });
       
-      throw new Error(`Échec de mise en queue: ${error.message}`);
+      return {
+        success: false,
+        error: 'Échec de mise en queue',
+        details: {
+          message: error.message,
+          recipientCount: recipients.length,
+          template
+        }
+      };
     }
   }
 
