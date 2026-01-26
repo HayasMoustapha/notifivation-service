@@ -195,7 +195,14 @@ class EmailService {
       return { success: false, fallback: true, reason: 'No email service configured' };
     }
 
-    throw new Error('Tous les services email ont échoué');
+    return {
+      success: false,
+      error: 'Tous les services email ont échoué',
+      details: {
+        message: 'Aucun service email disponible',
+        attempted_services: ['SMTP', 'SendGrid', 'Fallback']
+      }
+    };
   }
 
   /**
@@ -237,7 +244,15 @@ class EmailService {
         ip: options.ip
       });
       
-      throw new Error(`Échec d'envoi de l'email transactionnel: ${error.message}`);
+      return {
+        success: false,
+        error: 'Échec d\'envoi de l\'email transactionnel',
+        details: {
+          message: error.message,
+          template,
+          recipient: to
+        }
+      };
     }
   }
 
@@ -267,14 +282,22 @@ class EmailService {
         subject = data.subject || defaultTemplate.subject;
       }
 
-      return { subject, html, text };
+      return { html, text };
     } catch (error) {
       logger.error('Failed to generate email content', {
         template,
-        error: error.message
+        error: error.message,
+        dataKeys: Object.keys(data)
       });
       
-      throw new Error(`Échec de génération du contenu: ${error.message}`);
+      return {
+        success: false,
+        error: 'Échec de génération du contenu',
+        details: {
+          message: error.message,
+          template
+        }
+      };
     }
   }
 
@@ -310,12 +333,20 @@ class EmailService {
       return result;
     } catch (error) {
       logger.error('Failed to queue bulk email', {
+        recipientCount: recipients.length,
         template,
-        recipientsCount: recipients.length,
         error: error.message
       });
       
-      throw new Error(`Échec de mise en queue: ${error.message}`);
+      return {
+        success: false,
+        error: 'Échec de mise en queue',
+        details: {
+          message: error.message,
+          recipientCount: recipients.length,
+          template
+        }
+      };
     }
   }
 
