@@ -1,9 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const notificationsController = require('../controllers/notifications.controller');
-const { authenticate, requirePermission, requireAPIKey, requireWebhookSecret } = require('../../../../shared');
-const { injectUserContext } = require('../../../../shared/context-middleware');
-const { validate, schemas } = require('../../middleware/validation');
+const { 
+  SecurityMiddleware, 
+  authenticate, 
+  requirePermission, 
+  requireAPIKey, 
+  requireWebhookSecret,
+  validate,
+  createNotificationsValidator
+} = require('../../../../shared');
 const logger = require('../../utils/logger');
 const { errorResponse } = require('../../utils/response');
 
@@ -12,23 +18,19 @@ const { errorResponse } = require('../../utils/response');
  */
 
 // Middleware d'authentification pour la plupart des routes
-router.use(authenticate);
+router.use(SecurityMiddleware.authenticated());
 
 // POST /api/notifications/email - Envoyer un email transactionnel
 router.post('/email',
-  authenticate,
-  injectUserContext,
-  requirePermission('notifications.email.send'),
-  validate(schemas.sendEmail),
+  SecurityMiddleware.withPermissions('notifications.email.send'),
+  createNotificationsValidator('sendEmail'),
   notificationsController.sendEmail
 );
 
 // POST /api/notifications/sms - Envoyer un SMS transactionnel
 router.post('/sms',
-  authenticate,
-  injectUserContext,
-  requirePermission('notifications.sms.send'),
-  validate(schemas.sendSMS),
+  SecurityMiddleware.withPermissions('notifications.sms.send'),
+  createNotificationsValidator('sendSMS'),
   notificationsController.sendSMS
 );
 
