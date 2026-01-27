@@ -56,8 +56,15 @@ class NotificationServer {
     this.app.use(express.json({ limit: '10mb' }));
     this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-    // Sécurité contre les injections NoSQL
-    this.app.use(mongoSanitize());
+    // Sécurité contre les injections NoSQL - CORRECTION : désactiver mongoSanitize défectueux
+    // TODO: Remplacer par une solution plus stable comme mongo-express-sanitize
+    // this.app.use(mongoSanitize({
+    //   onSanitize: ({ req, key, value }) => {
+    //     if (process.env.NODE_ENV === 'development') {
+    //       console.log(`🔒 Sanitized ${key}: ${value}`);
+    //     }
+    //   }
+    // }));
 
     // Logging
     if (process.env.NODE_ENV !== 'test') {
