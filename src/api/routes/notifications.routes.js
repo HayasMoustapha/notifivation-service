@@ -1,15 +1,13 @@
 const express = require('express');
+const Joi = require('joi');
 const router = express.Router();
 const notificationsController = require('../controllers/notifications.controller');
 const { 
   SecurityMiddleware, 
-  authenticate, 
-  requirePermission, 
-  requireAPIKey, 
-  requireWebhookSecret,
-  validate,
-  createNotificationsValidator
+  ValidationMiddleware, 
+  ContextInjector 
 } = require('../../../../shared');
+const { notificationErrorHandler } = require('../../error/notification.errorHandler');
 const logger = require('../../utils/logger');
 const { errorResponse } = require('../../utils/response');
 
@@ -17,88 +15,95 @@ const { errorResponse } = require('../../utils/response');
  * Routes pour les notifications
  */
 
-// Middleware d'authentification pour la plupart des routes
+// Apply authentication to all routes (sauf webhooks et health)
 router.use(SecurityMiddleware.authenticated());
+
+// Apply context injection for all authenticated routes
+router.use(ContextInjector.injectUserContext());
+
+// Apply error handler for all routes
+router.use(notificationErrorHandler);
 
 // POST /api/notifications/email - Envoyer un email transactionnel
 router.post('/email',
   SecurityMiddleware.withPermissions('notifications.email.send'),
-  createNotificationsValidator('sendEmail'),
+  ValidationMiddleware.createNotificationsValidator('sendEmail'),
   notificationsController.sendEmail
 );
 
 // POST /api/notifications/sms - Envoyer un SMS transactionnel
 router.post('/sms',
   SecurityMiddleware.withPermissions('notifications.sms.send'),
-  createNotificationsValidator('sendSMS'),
+  ValidationMiddleware.createNotificationsValidator('sendSMS'),
   notificationsController.sendSMS
 );
 
 // POST /api/notifications/email/queue - Mettre en file d'attente un email
 router.post('/email/queue',
-  authenticate,
-  injectUserContext,
-  requirePermission('notifications.email.queue'),
-  validate(schemas.sendEmail),
+  SecurityMiddleware.withPermissions('notifications.email.queue'),
+  ValidationMiddleware.createNotificationsValidator('queueEmail'),
   notificationsController.queueEmail
 );
 
 // POST /api/notifications/sms/queue - Mettre en file d'attente un SMS
 router.post('/sms/queue',
-  authenticate,
-  injectUserContext,
-  requirePermission('notifications.sms.queue'),
-  validate(schemas.sendSMS),
+  SecurityMiddleware.withPermissions('notifications.sms.queue'),
+  ValidationMiddleware.createNotificationsValidator('queueSMS'),
   notificationsController.queueSMS
 );
 
 // POST /api/notifications/email/bulk - Envoyer des emails en lot
 router.post('/email/bulk',
-  authenticate,
-  injectUserContext,
-  requirePermission('notifications.email.bulk'),
-  validate(schemas.sendBulkEmail),
+  SecurityMiddleware.withPermissions('notifications.email.bulk'),
+  ValidationMiddleware.createNotificationsValidator('sendBulkEmail'),
   notificationsController.sendBulkEmail
 );
 
 // POST /api/notifications/sms/bulk - Envoyer des SMS en lot
 router.post('/sms/bulk',
-  requirePermission('notifications.sms.bulk'),
-  validate(schemas.sendBulkSMS),
+  SecurityMiddleware.withPermissions('notifications.sms.bulk'),
+  ValidationMiddleware.createNotificationsValidator('sendBulkSMS'),
   notificationsController.sendBulkSMS
 );
 
 // POST /api/notifications/bulk/mixed - Envoyer des notifications mixtes en lot
 router.post('/bulk/mixed',
-  requirePermission('notifications.bulk.mixed'),
-  validate(schemas.sendBulkMixed),
+  SecurityMiddleware.withPermissions('notifications.bulk.mixed'),
+  ValidationMiddleware.createNotificationsValidator('sendBulkMixed'),
   notificationsController.sendBulkMixed
 );
 
 // GET /api/notifications/job/:jobId/status - Récupérer le statut d'un job
 router.get('/job/:jobId/status',
-  requirePermission('notifications.jobs.read'),
-  validate(schemas.getJobStatus, 'params'),
+  SecurityMiddleware.withPermissions('notifications.jobs.read'),
+  ValidationMiddleware.validateParams({
+    jobId: Joi.string().required()
+  }),
   notificationsController.getJobStatus
 );
 
 // DELETE /api/notifications/job/:jobId/cancel - Annuler un job
 router.delete('/job/:jobId/cancel',
-  requirePermission('notifications.jobs.cancel'),
-  validate(schemas.cancelJob, 'params'),
+  SecurityMiddleware.withPermissions('notifications.jobs.cancel'),
+  ValidationMiddleware.validateParams({
+    jobId: Joi.string().required()
+  }),
   notificationsController.cancelJob
 );
 
 // GET /api/notifications/queues/stats - Récupérer les statistiques des queues
 router.get('/queues/stats',
-  requirePermission('notifications.stats.read'),
+  SecurityMiddleware.withPermissions('notifications.stats.read'),
   notificationsController.getQueueStats
 );
 
 // POST /api/notifications/queues/clean - Nettoyer les jobs terminés
 router.post('/queues/clean',
-  requirePermission('notifications.admin'),
-  validate(schemas.cleanJobs, 'query'),
+  SecurityMiddleware.withPermissions('notifications.admin'),
+  ValidationMiddleware.validateQuery({
+    older_than_hours: Joi.number().integer().min(1).default(24),
+    status: Joi.string().valid('completed', 'failed', 'cancelled').optional()
+  }),
   notificationsController.cleanCompletedJobs
 );
 
@@ -106,50 +111,50 @@ router.post('/queues/clean',
 
 // POST /api/notifications/welcome/email - Email de bienvenue
 router.post('/welcome/email',
-  requirePermission('notifications.welcome.send'),
-  validate(schemas.sendEmail),
+  SecurityMiddleware.withPermissions('notifications.welcome.send'),
+  ValidationMiddleware.createNotificationsValidator('sendEmail'),
   notificationsController.sendWelcomeEmail
 );
 
 // POST /api/notifications/welcome/sms - SMS de bienvenue
 router.post('/welcome/sms',
-  requirePermission('notifications.welcome.send'),
-  validate(schemas.sendSMS),
+  SecurityMiddleware.withPermissions('notifications.welcome.send'),
+  ValidationMiddleware.createNotificationsValidator('sendSMS'),
   notificationsController.sendWelcomeSMS
 );
 
 // POST /api/notifications/password-reset/email - Email de réinitialisation de mot de passe
 router.post('/password-reset/email',
-  requirePermission('notifications.password-reset.send'),
-  validate(schemas.sendEmail),
+  SecurityMiddleware.withPermissions('notifications.password-reset.send'),
+  ValidationMiddleware.createNotificationsValidator('sendEmail'),
   notificationsController.sendPasswordResetEmail
 );
 
 // POST /api/notifications/password-reset/sms - SMS de réinitialisation de mot de passe
 router.post('/password-reset/sms',
-  requirePermission('notifications.password-reset.send'),
-  validate(schemas.sendSMS),
+  SecurityMiddleware.withPermissions('notifications.password-reset.send'),
+  ValidationMiddleware.createNotificationsValidator('sendSMS'),
   notificationsController.sendPasswordResetSMS
 );
 
 // POST /api/notifications/event-confirmation/email - Email de confirmation d'événement
 router.post('/event-confirmation/email',
-  requirePermission('notifications.event-confirmation.send'),
-  validate(schemas.sendEmail),
+  SecurityMiddleware.withPermissions('notifications.event-confirmation.send'),
+  ValidationMiddleware.createNotificationsValidator('sendEmail'),
   notificationsController.sendEventConfirmationEmail
 );
 
 // POST /api/notifications/event-confirmation/sms - SMS de confirmation d'événement
 router.post('/event-confirmation/sms',
-  requirePermission('notifications.event-confirmation.send'),
-  validate(schemas.sendSMS),
+  SecurityMiddleware.withPermissions('notifications.event-confirmation.send'),
+  ValidationMiddleware.createNotificationsValidator('sendSMS'),
   notificationsController.sendEventConfirmationSMS
 );
 
 // POST /api/notifications/otp/sms - SMS OTP
 router.post('/otp/sms',
-  requirePermission('notifications.otp.send'),
-  validate(schemas.sendSMS),
+  SecurityMiddleware.withPermissions('notifications.otp.send'),
+  ValidationMiddleware.createNotificationsValidator('sendSMS'),
   notificationsController.sendOTPSMS
 );
 
@@ -162,7 +167,7 @@ router.get('/health',
 
 // GET /api/notifications/stats - Récupérer les statistiques du service
 router.get('/stats',
-  requirePermission('notifications.stats.read'),
+  SecurityMiddleware.withPermissions('notifications.stats.read'),
   notificationsController.getStats
 );
 
@@ -170,22 +175,22 @@ router.get('/stats',
 
 // POST /api/notifications/webhooks/email - Webhook pour les emails externes
 router.post('/webhooks/email',
-  requireAPIKey,
-  validate(schemas.webhook),
+  SecurityMiddleware.requireAPIKey(),
+  ValidationMiddleware.createNotificationsValidator('webhook'),
   notificationsController.sendEmail
 );
 
 // POST /api/notifications/webhooks/sms - Webhook pour les SMS externes
 router.post('/webhooks/sms',
-  requireAPIKey,
-  validate(schemas.webhook),
+  SecurityMiddleware.requireAPIKey(),
+  ValidationMiddleware.createNotificationsValidator('webhook'),
   notificationsController.sendSMS
 );
 
 // POST /api/notifications/webhooks/bulk - Webhook pour les notifications en lot
 router.post('/webhooks/bulk',
-  requireAPIKey,
-  validate(schemas.sendBulkMixed),
+  SecurityMiddleware.requireAPIKey(),
+  ValidationMiddleware.createNotificationsValidator('sendBulkMixed'),
   notificationsController.sendBulkMixed
 );
 
@@ -193,8 +198,8 @@ router.post('/webhooks/bulk',
 
 // POST /api/notifications/integrations/stripe - Webhook Stripe
 router.post('/integrations/stripe',
-  requireWebhookSecret,
-  validate(schemas.webhook),
+  SecurityMiddleware.requireWebhookSecret(),
+  ValidationMiddleware.createNotificationsValidator('webhook'),
   async (req, res) => {
     try {
       const { event, data } = req.body;
@@ -251,8 +256,8 @@ router.post('/integrations/stripe',
 
 // POST /api/notifications/integrations/github - Webhook GitHub
 router.post('/integrations/github',
-  requireWebhookSecret,
-  validate(schemas.webhook),
+  SecurityMiddleware.requireWebhookSecret(),
+  ValidationMiddleware.createNotificationsValidator('webhook'),
   async (req, res) => {
     try {
       const { event, data } = req.body;
