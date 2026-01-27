@@ -229,6 +229,4 @@ const notificationErrorHandler = ErrorHandlerFactory.create('Notification Servic
   }
 });
 
-module.exports = {
-  notificationErrorHandler
-};
+module.exports = notificationErrorHandler;

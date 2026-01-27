@@ -7,7 +7,7 @@ const {
   ValidationMiddleware, 
   ContextInjector 
 } = require('../../../../shared');
-const { notificationErrorHandler } = require('../../error/notification.errorHandler');
+const notificationErrorHandler = require('../../error/notification.errorHandler');
 const logger = require('../../utils/logger');
 const { errorResponse } = require('../../utils/response');
 
@@ -41,35 +41,80 @@ router.post('/sms',
 // POST /api/notifications/email/queue - Mettre en file d'attente un email
 router.post('/email/queue',
   SecurityMiddleware.withPermissions('notifications.email.queue'),
-  ValidationMiddleware.createNotificationsValidator('queueEmail'),
+  ValidationMiddleware.validate({
+    body: Joi.object({
+      to: Joi.string().email().required(),
+      template: Joi.string().required(),
+      data: Joi.object().required(),
+      options: Joi.object({
+        priority: Joi.string().valid('low', 'normal', 'high').default('normal'),
+        send_at: Joi.date().optional()
+      }).optional()
+    })
+  }),
   notificationsController.queueEmail
 );
 
 // POST /api/notifications/sms/queue - Mettre en file d'attente un SMS
 router.post('/sms/queue',
   SecurityMiddleware.withPermissions('notifications.sms.queue'),
-  ValidationMiddleware.createNotificationsValidator('queueSMS'),
+  ValidationMiddleware.validate({
+    body: Joi.object({
+      to: Joi.string().pattern(/^[+]?[\d\s-()]+$/).required(),
+      message: Joi.string().required(),
+      options: Joi.object({
+        priority: Joi.string().valid('low', 'normal', 'high').default('normal')
+      }).optional()
+    })
+  }),
   notificationsController.queueSMS
 );
 
 // POST /api/notifications/email/bulk - Envoyer des emails en lot
 router.post('/email/bulk',
   SecurityMiddleware.withPermissions('notifications.email.bulk'),
-  ValidationMiddleware.createNotificationsValidator('sendBulkEmail'),
+  ValidationMiddleware.validate({
+    body: Joi.object({
+      emails: Joi.array().items(Joi.string().email()).required(),
+      template: Joi.string().required(),
+      data: Joi.object().required(),
+      options: Joi.object({
+        priority: Joi.string().valid('low', 'normal', 'high').default('normal')
+      }).optional()
+    })
+  }),
   notificationsController.sendBulkEmail
 );
 
 // POST /api/notifications/sms/bulk - Envoyer des SMS en lot
 router.post('/sms/bulk',
   SecurityMiddleware.withPermissions('notifications.sms.bulk'),
-  ValidationMiddleware.createNotificationsValidator('sendBulkSMS'),
+  ValidationMiddleware.validate({
+    body: Joi.object({
+      phones: Joi.array().items(Joi.string().pattern(/^[+]?[\d\s-()]+$/)).required(),
+      message: Joi.string().required(),
+      options: Joi.object({
+        priority: Joi.string().valid('low', 'normal', 'high').default('normal')
+      }).optional()
+    })
+  }),
   notificationsController.sendBulkSMS
 );
 
 // POST /api/notifications/bulk/mixed - Envoyer des notifications mixtes en lot
 router.post('/bulk/mixed',
   SecurityMiddleware.withPermissions('notifications.bulk.mixed'),
-  ValidationMiddleware.createNotificationsValidator('sendBulkMixed'),
+  ValidationMiddleware.validate({
+    body: Joi.object({
+      emails: Joi.array().items(Joi.string().email()).optional(),
+      phones: Joi.array().items(Joi.string().pattern(/^[+]?[\d\s-()]+$/)).optional(),
+      template: Joi.string().required(),
+      data: Joi.object().required(),
+      options: Joi.object({
+        priority: Joi.string().valid('low', 'normal', 'high').default('normal')
+      }).optional()
+    })
+  }),
   notificationsController.sendBulkMixed
 );
 
@@ -175,22 +220,56 @@ router.get('/stats',
 
 // POST /api/notifications/webhooks/email - Webhook pour les emails externes
 router.post('/webhooks/email',
-  SecurityMiddleware.requireAPIKey(),
-  ValidationMiddleware.createNotificationsValidator('webhook'),
+  ValidationMiddleware.validate({
+    headers: Joi.object({
+      'x-api-key': Joi.string().required()
+    }),
+    body: Joi.object({
+      to: Joi.string().email().required(),
+      template: Joi.string().required(),
+      data: Joi.object().required(),
+      options: Joi.object({
+        priority: Joi.string().valid('low', 'normal', 'high').default('normal'),
+        send_at: Joi.date().optional()
+      }).optional()
+    })
+  }),
   notificationsController.sendEmail
 );
 
 // POST /api/notifications/webhooks/sms - Webhook pour les SMS externes
 router.post('/webhooks/sms',
-  SecurityMiddleware.requireAPIKey(),
-  ValidationMiddleware.createNotificationsValidator('webhook'),
+  ValidationMiddleware.validate({
+    headers: Joi.object({
+      'x-api-key': Joi.string().required()
+    }),
+    body: Joi.object({
+      to: Joi.string().pattern(/^[+]?[\d\s-()]+$/).required(),
+      message: Joi.string().required(),
+      options: Joi.object({
+        priority: Joi.string().valid('low', 'normal', 'high').default('normal')
+      }).optional()
+    })
+  }),
   notificationsController.sendSMS
 );
 
 // POST /api/notifications/webhooks/bulk - Webhook pour les notifications en lot
 router.post('/webhooks/bulk',
-  SecurityMiddleware.requireAPIKey(),
-  ValidationMiddleware.createNotificationsValidator('sendBulkMixed'),
+  ValidationMiddleware.validate({
+    headers: Joi.object({
+      'x-api-key': Joi.string().required()
+    }),
+    body: Joi.object({
+      emails: Joi.array().items(Joi.string().email()).optional(),
+      phones: Joi.array().items(Joi.string().pattern(/^[+]?[\d\s-()]+$/)).optional(),
+      template: Joi.string().required(),
+      data: Joi.object().required(),
+      options: Joi.object({
+        priority: Joi.string().valid('low', 'normal', 'high').default('normal')
+      }).optional()
+    })
+  }),
   notificationsController.sendBulkMixed
 );
 
@@ -198,8 +277,15 @@ router.post('/webhooks/bulk',
 
 // POST /api/notifications/integrations/stripe - Webhook Stripe
 router.post('/integrations/stripe',
-  SecurityMiddleware.requireWebhookSecret(),
-  ValidationMiddleware.createNotificationsValidator('webhook'),
+  ValidationMiddleware.validate({
+    headers: Joi.object({
+      'stripe-signature': Joi.string().required()
+    }),
+    body: Joi.object({
+      event: Joi.string().required(),
+      data: Joi.object().required()
+    })
+  }),
   async (req, res) => {
     try {
       const { event, data } = req.body;
@@ -256,8 +342,15 @@ router.post('/integrations/stripe',
 
 // POST /api/notifications/integrations/github - Webhook GitHub
 router.post('/integrations/github',
-  SecurityMiddleware.requireWebhookSecret(),
-  ValidationMiddleware.createNotificationsValidator('webhook'),
+  ValidationMiddleware.validate({
+    headers: Joi.object({
+      'x-hub-signature-256': Joi.string().required()
+    }),
+    body: Joi.object({
+      event: Joi.string().required(),
+      data: Joi.object().required()
+    })
+  }),
   async (req, res) => {
     try {
       const { event, data } = req.body;
