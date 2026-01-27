@@ -15,6 +15,9 @@ const {
 } = require('../../utils/response');
 const logger = require('../../utils/logger');
 
+// Constante par défaut pour l'utilisateur ID
+const DEFAULT_USER_ID = 1;
+
 /**
  * Contrôleur pour les notifications
  * Gère l'envoi d'emails, SMS et les traitements en lot
@@ -26,15 +29,13 @@ class NotificationsController {
   async sendEmail(req, res) {
     try {
       const { to, template, data, options = {} } = req.body;
-      
-      logger.email('Sending transactional email', {
-        to,
-        template,
-        ip: req.ip
-      });
+
+      // Utilisation de l'utilisateur par défaut
+      const userId = DEFAULT_USER_ID;
 
       const result = await emailService.sendTransactionalEmail(to, template, data, {
         ...options,
+        userId,
         ip: req.ip
       });
 
@@ -49,26 +50,24 @@ class NotificationsController {
       });
 
       return res.status(500).json(
-        errorResponse('Échec de l\'envoi de l\'email', null, 'EMAIL_SEND_FAILED')
+        errorResponse('Failed to send email')
       );
     }
   }
 
   /**
-   * Envoie un SMS transactionnel
+   * Envoie un SMS
    */
   async sendSMS(req, res) {
     try {
-      const { phoneNumber, template, data, options = {} } = req.body;
-      
-      logger.sms('Sending transactional SMS', {
-        phoneNumber: smsService.maskPhoneNumber(phoneNumber),
-        template,
-        ip: req.ip
-      });
+      const { to, message, options = {} } = req.body;
 
-      const result = await smsService.sendTransactionalSMS(phoneNumber, template, data, {
+      // Utilisation de l'utilisateur par défaut
+      const userId = DEFAULT_USER_ID;
+
+      const result = await smsService.sendSMS(to, message, {
         ...options,
+        userId,
         ip: req.ip
       });
 
@@ -78,234 +77,107 @@ class NotificationsController {
     } catch (error) {
       logger.error('Failed to send SMS', {
         error: error.message,
-        phoneNumber: smsService.maskPhoneNumber(req.body.phoneNumber),
-        template: req.body.template
+        to: req.body.to
       });
 
       return res.status(500).json(
-        errorResponse('Échec de l\'envoi du SMS', null, 'SMS_SEND_FAILED')
+        errorResponse('Failed to send SMS')
       );
     }
   }
 
   /**
-   * Met en file d'attente un email
+   * Envoie une notification multi-canaux
    */
-  async queueEmail(req, res) {
+  async sendNotification(req, res) {
     try {
-      const { to, template, data, options = {} } = req.body;
-      
-      const jobData = {
-        type: 'transactional',
-        to,
-        template,
-        data,
-        options: {
-          ...options,
-          ip: req.ip
-        }
-      };
+      const { channels, recipients, template, data, options = {} } = req.body;
 
-      const result = await queueService.addEmailJob(jobData);
+      // Utilisation de l'utilisateur par défaut
+      const userId = DEFAULT_USER_ID;
 
-      logger.queue('Email job queued', {
-        jobId: result.jobId,
-        to,
-        template
-      });
-
-      return res.status(202).json(
-        queuedResponse('Email mis en file d\'attente', result)
-      );
-    } catch (error) {
-      logger.error('Failed to queue email', {
-        error: error.message,
-        to: req.body.to,
-        template: req.body.template
-      });
-
-      return res.status(500).json(
-        errorResponse('Échec de la mise en file d\'attente de l\'email', null, 'EMAIL_QUEUE_FAILED')
-      );
-    }
-  }
-
-  /**
-   * Met en file d'attente un SMS
-   */
-  async queueSMS(req, res) {
-    try {
-      const { phoneNumber, template, data, options = {} } = req.body;
-      
-      const jobData = {
-        type: 'transactional',
-        phoneNumber,
-        template,
-        data,
-        options: {
-          ...options,
-          ip: req.ip
-        }
-      };
-
-      const result = await queueService.addSMSJob(jobData);
-
-      logger.queue('SMS job queued', {
-        jobId: result.jobId,
-        phoneNumber: smsService.maskPhoneNumber(phoneNumber),
-        template
-      });
-
-      return res.status(202).json(
-        queuedResponse('SMS mis en file d\'attente', result)
-      );
-    } catch (error) {
-      logger.error('Failed to queue SMS', {
-        error: error.message,
-        phoneNumber: smsService.maskPhoneNumber(req.body.phoneNumber),
-        template: req.body.template
-      });
-
-      return res.status(500).json(
-        errorResponse('Échec de la mise en file d\'attente du SMS', null, 'SMS_QUEUE_FAILED')
-      );
-    }
-  }
-
-  /**
-   * Envoie des emails en lot
-   */
-  async sendBulkEmail(req, res) {
-    try {
-      const { recipients, template, data, options = {} } = req.body;
-      
-      logger.bulk('Sending bulk emails', {
-        template,
-        recipientsCount: recipients.length,
-        ip: req.ip
-      });
-
-      const result = await emailService.queueBulkEmail(recipients, template, data, {
-        ...options,
-        ip: req.ip
-      });
-
-      return res.status(202).json(
-        queuedResponse('Emails en lot mis en file d\'attente', result)
-      );
-    } catch (error) {
-      logger.error('Failed to send bulk emails', {
-        error: error.message,
-        template: req.body.template,
-        recipientsCount: req.body.recipients?.length
-      });
-
-      return res.status(500).json(
-        errorResponse('Échec de l\'envoi en lot des emails', null, 'BULK_EMAIL_FAILED')
-      );
-    }
-  }
-
-  /**
-   * Envoie des SMS en lot
-   */
-  async sendBulkSMS(req, res) {
-    try {
-      const { recipients, template, data, options = {} } = req.body;
-      
-      logger.bulk('Sending bulk SMS', {
-        template,
-        recipientsCount: recipients.length,
-        ip: req.ip
-      });
-
-      const result = await smsService.queueBulkSMS(recipients, template, data, {
-        ...options,
-        ip: req.ip
-      });
-
-      return res.status(202).json(
-        queuedResponse('SMS en lot mis en file d\'attente', result)
-      );
-    } catch (error) {
-      logger.error('Failed to send bulk SMS', {
-        error: error.message,
-        template: req.body.template,
-        recipientsCount: req.body.recipients?.length
-      });
-
-      return res.status(500).json(
-        errorResponse('Échec de l\'envoi en lot des SMS', null, 'BULK_SMS_FAILED')
-      );
-    }
-  }
-
-  /**
-   * Envoie des notifications mixtes en lot (email + SMS)
-   */
-  async sendBulkMixed(req, res) {
-    try {
-      const { recipients, template, data, options = {} } = req.body;
-      
-      logger.bulk('Sending bulk mixed notifications', {
-        template,
-        type: options.type || 'both',
-        recipientsCount: recipients.length,
-        ip: req.ip
-      });
-
-      const jobData = {
-        type: options.type || 'both',
+      const result = await queueService.queueNotification({
+        channels,
         recipients,
         template,
         data,
         options: {
           ...options,
+          userId,
           ip: req.ip
         }
-      };
+      });
 
-      const result = await queueService.addBulkJob(jobData);
-
-      return res.status(202).json(
-        queuedResponse('Notifications mixtes en lot mises en file d\'attente', result)
+      return res.status(201).json(
+        queuedResponse(result)
       );
     } catch (error) {
-      logger.error('Failed to send bulk mixed notifications', {
+      logger.error('Failed to queue notification', {
         error: error.message,
-        template: req.body.template,
-        recipientsCount: req.body.recipients?.length
+        channels: req.body.channels,
+        recipients: req.body.recipients
       });
 
       return res.status(500).json(
-        errorResponse('Échec de l\'envoi en lot des notifications mixtes', null, 'BULK_MIXED_FAILED')
+        errorResponse('Failed to queue notification')
       );
     }
   }
 
   /**
-   * Récupère le statut d'un job
+   * Envoie des notifications en lot
+   */
+  async sendBulkNotifications(req, res) {
+    try {
+      const { notifications, options = {} } = req.body;
+
+      // Utilisation de l'utilisateur par défaut
+      const userId = DEFAULT_USER_ID;
+
+      const result = await queueService.queueBulkNotifications(notifications, {
+        ...options,
+        userId,
+        ip: req.ip
+      });
+
+      return res.status(201).json(
+        bulkNotificationResultResponse(result)
+      );
+    } catch (error) {
+      logger.error('Failed to queue bulk notifications', {
+        error: error.message,
+        count: req.body.notifications?.length
+      });
+
+      return res.status(500).json(
+        errorResponse('Failed to queue bulk notifications')
+      );
+    }
+  }
+
+  /**
+   * Obtient le statut d'un job de notification
    */
   async getJobStatus(req, res) {
     try {
       const { jobId } = req.params;
-      const { queueName = 'email' } = req.query;
-      
-      logger.queue('Getting job status', {
-        jobId,
-        queueName
-      });
 
-      const result = await queueService.getJobStatus(jobId, queueName);
-
-      if (!result.success) {
-        return res.status(404).json(
-          notFoundResponse('Job', jobId)
+      if (!jobId) {
+        return res.status(400).json(
+          errorResponse('Job ID is required')
         );
       }
 
-      return res.status(200).json(
-        jobStatusResponse(result.job)
+      const result = await queueService.getJobStatus(jobId);
+
+      if (!result.success) {
+        return res.status(404).json(
+          notFoundResponse('Job not found', result.error)
+        );
+      }
+
+      return res.json(
+        jobStatusResponse(result.data)
       );
     } catch (error) {
       logger.error('Failed to get job status', {
@@ -314,34 +186,55 @@ class NotificationsController {
       });
 
       return res.status(500).json(
-        errorResponse('Échec de la récupération du statut du job', null, 'JOB_STATUS_FAILED')
+        errorResponse('Failed to get job status')
       );
     }
   }
 
   /**
-   * Annule un job
+   * Obtient les statistiques des queues
+   */
+  async getQueueStats(req, res) {
+    try {
+      const result = await queueService.getQueueStats();
+
+      return res.json(
+        queueStatsResponse(result.data)
+      );
+    } catch (error) {
+      logger.error('Failed to get queue stats', {
+        error: error.message
+      });
+
+      return res.status(500).json(
+        errorResponse('Failed to get queue stats')
+      );
+    }
+  }
+
+  /**
+   * Annule un job de notification
    */
   async cancelJob(req, res) {
     try {
       const { jobId } = req.params;
-      const { queueName = 'email' } = req.query;
-      
-      logger.queue('Cancelling job', {
-        jobId,
-        queueName
-      });
 
-      const result = await queueService.cancelJob(jobId, queueName);
-
-      if (!result.success) {
-        return res.status(404).json(
-          notFoundResponse('Job', jobId)
+      if (!jobId) {
+        return res.status(400).json(
+          errorResponse('Job ID is required')
         );
       }
 
-      return res.status(200).json(
-        successResponse('Job annulé avec succès', { jobId, cancelled: true })
+      const result = await queueService.cancelJob(jobId);
+
+      if (!result.success) {
+        return res.status(400).json(
+          errorResponse(result.error)
+        );
+      }
+
+      return res.json(
+        successResponse('Job cancelled successfully', result.data)
       );
     } catch (error) {
       logger.error('Failed to cancel job', {
@@ -350,30 +243,43 @@ class NotificationsController {
       });
 
       return res.status(500).json(
-        errorResponse('Échec de l\'annulation du job', null, 'JOB_CANCEL_FAILED')
+        errorResponse('Failed to cancel job')
       );
     }
   }
 
   /**
-   * Récupère les statistiques des queues
+   * Relance un job de notification échoué
    */
-  async getQueueStats(req, res) {
+  async retryJob(req, res) {
     try {
-      logger.queue('Getting queue statistics');
+      const { jobId } = req.params;
 
-      const result = await queueService.getQueueStats();
+      if (!jobId) {
+        return res.status(400).json(
+          errorResponse('Job ID is required')
+        );
+      }
 
-      return res.status(200).json(
-        queueStatsResponse(result.stats)
+      const result = await queueService.retryJob(jobId);
+
+      if (!result.success) {
+        return res.status(400).json(
+          errorResponse(result.error)
+        );
+      }
+
+      return res.json(
+        successResponse('Job retried successfully', result.data)
       );
     } catch (error) {
-      logger.error('Failed to get queue stats', {
-        error: error.message
+      logger.error('Failed to retry job', {
+        error: error.message,
+        jobId: req.params.jobId
       });
 
       return res.status(500).json(
-        errorResponse('Échec de la récupération des statistiques', null, 'QUEUE_STATS_FAILED')
+        errorResponse('Failed to retry job')
       );
     }
   }
@@ -381,48 +287,38 @@ class NotificationsController {
   /**
    * Nettoie les jobs terminés
    */
-  async cleanCompletedJobs(req, res) {
+  async cleanupJobs(req, res) {
     try {
-      const { queueName } = req.query;
-      
-      logger.queue('Cleaning completed jobs', {
-        queueName
-      });
+      const { olderThan } = req.query;
 
-      const result = await queueService.cleanCompletedJobs(queueName);
+      const result = await queueService.cleanupJobs(olderThan ? new Date(olderThan) : null);
 
-      return res.status(200).json(
-        successResponse('Jobs terminés nettoyés avec succès', {
-          cleanedCount: result.cleanedCount,
-          cleanedAt: result.cleanedAt
-        })
+      return res.json(
+        successResponse('Jobs cleaned up successfully', result.data)
       );
     } catch (error) {
-      logger.error('Failed to clean completed jobs', {
-        error: error.message,
-        queueName: req.query.queueName
+      logger.error('Failed to cleanup jobs', {
+        error: error.message
       });
 
       return res.status(500).json(
-        errorResponse('Échec du nettoyage des jobs', null, 'CLEAN_JOBS_FAILED')
+        errorResponse('Failed to cleanup jobs')
       );
     }
   }
 
   /**
-   * Envoie un email de bienvenue
+   * Test d'envoi d'email
    */
-  async sendWelcomeEmail(req, res) {
+  async testEmail(req, res) {
     try {
-      const { to, userData, options = {} } = req.body;
-      
-      logger.email('Sending welcome email', {
-        to,
-        ip: req.ip
-      });
+      const { to, template, data } = req.body;
 
-      const result = await emailService.sendWelcomeEmail(to, userData, {
-        ...options,
+      // Utilisation de l'utilisateur par défaut
+      const userId = DEFAULT_USER_ID;
+
+      const result = await emailService.sendTestEmail(to, template, data, {
+        userId,
         ip: req.ip
       });
 
@@ -430,31 +326,29 @@ class NotificationsController {
         notificationResultResponse(result)
       );
     } catch (error) {
-      logger.error('Failed to send welcome email', {
+      logger.error('Failed to send test email', {
         error: error.message,
         to: req.body.to
       });
 
       return res.status(500).json(
-        errorResponse('Échec de l\'envoi de l\'email de bienvenue', null, 'WELCOME_EMAIL_FAILED')
+        errorResponse('Failed to send test email')
       );
     }
   }
 
   /**
-   * Envoie un SMS de bienvenue
+   * Test d'envoi de SMS
    */
-  async sendWelcomeSMS(req, res) {
+  async testSMS(req, res) {
     try {
-      const { phoneNumber, userData, options = {} } = req.body;
-      
-      logger.sms('Sending welcome SMS', {
-        phoneNumber: smsService.maskPhoneNumber(phoneNumber),
-        ip: req.ip
-      });
+      const { to, message } = req.body;
 
-      const result = await smsService.sendWelcomeSMS(phoneNumber, userData, {
-        ...options,
+      // Utilisation de l'utilisateur par défaut
+      const userId = DEFAULT_USER_ID;
+
+      const result = await smsService.sendTestSMS(to, message, {
+        userId,
         ip: req.ip
       });
 
@@ -462,244 +356,13 @@ class NotificationsController {
         notificationResultResponse(result)
       );
     } catch (error) {
-      logger.error('Failed to send welcome SMS', {
-        error: error.message,
-        phoneNumber: smsService.maskPhoneNumber(req.body.phoneNumber)
-      });
-
-      return res.status(500).json(
-        errorResponse('Échec de l\'envoi du SMS de bienvenue', null, 'WELCOME_SMS_FAILED')
-      );
-    }
-  }
-
-  /**
-   * Envoie un email de réinitialisation de mot de passe
-   */
-  async sendPasswordResetEmail(req, res) {
-    try {
-      const { to, resetToken, options = {} } = req.body;
-      
-      logger.email('Sending password reset email', {
-        to,
-        ip: req.ip
-      });
-
-      const result = await emailService.sendPasswordResetEmail(to, resetToken, {
-        ...options,
-        ip: req.ip
-      });
-
-      return res.status(201).json(
-        notificationResultResponse(result)
-      );
-    } catch (error) {
-      logger.error('Failed to send password reset email', {
+      logger.error('Failed to send test SMS', {
         error: error.message,
         to: req.body.to
       });
 
       return res.status(500).json(
-        errorResponse('Échec de l\'envoi de l\'email de réinitialisation', null, 'PASSWORD_RESET_EMAIL_FAILED')
-      );
-    }
-  }
-
-  /**
-   * Envoie un SMS de réinitialisation de mot de passe
-   */
-  async sendPasswordResetSMS(req, res) {
-    try {
-      const { phoneNumber, resetCode, options = {} } = req.body;
-      
-      logger.sms('Sending password reset SMS', {
-        phoneNumber: smsService.maskPhoneNumber(phoneNumber),
-        ip: req.ip
-      });
-
-      const result = await smsService.sendPasswordResetSMS(phoneNumber, resetCode, {
-        ...options,
-        ip: req.ip
-      });
-
-      return res.status(201).json(
-        notificationResultResponse(result)
-      );
-    } catch (error) {
-      logger.error('Failed to send password reset SMS', {
-        error: error.message,
-        phoneNumber: smsService.maskPhoneNumber(req.body.phoneNumber)
-      });
-
-      return res.status(500).json(
-        errorResponse('Échec de l\'envoi du SMS de réinitialisation', null, 'PASSWORD_RESET_SMS_FAILED')
-      );
-    }
-  }
-
-  /**
-   * Envoie un email de confirmation d'événement
-   */
-  async sendEventConfirmationEmail(req, res) {
-    try {
-      const { to, eventData, ticketData, options = {} } = req.body;
-      
-      logger.email('Sending event confirmation email', {
-        to,
-        eventId: eventData.id,
-        ip: req.ip
-      });
-
-      const result = await emailService.sendEventConfirmationEmail(to, eventData, ticketData, {
-        ...options,
-        ip: req.ip
-      });
-
-      return res.status(201).json(
-        notificationResultResponse(result)
-      );
-    } catch (error) {
-      logger.error('Failed to send event confirmation email', {
-        error: error.message,
-        to: req.body.to,
-        eventId: req.body.eventData?.id
-      });
-
-      return res.status(500).json(
-        errorResponse('Échec de l\'envoi de l\'email de confirmation', null, 'EVENT_CONFIRMATION_EMAIL_FAILED')
-      );
-    }
-  }
-
-  /**
-   * Envoie un SMS de confirmation d'événement
-   */
-  async sendEventConfirmationSMS(req, res) {
-    try {
-      const { phoneNumber, eventData, ticketData, options = {} } = req.body;
-      
-      logger.sms('Sending event confirmation SMS', {
-        phoneNumber: smsService.maskPhoneNumber(phoneNumber),
-        eventId: eventData.id,
-        ip: req.ip
-      });
-
-      const result = await smsService.sendEventConfirmationSMS(phoneNumber, eventData, ticketData, {
-        ...options,
-        ip: req.ip
-      });
-
-      return res.status(201).json(
-        notificationResultResponse(result)
-      );
-    } catch (error) {
-      logger.error('Failed to send event confirmation SMS', {
-        error: error.message,
-        phoneNumber: smsService.maskPhoneNumber(req.body.phoneNumber),
-        eventId: req.body.eventData?.id
-      });
-
-      return res.status(500).json(
-        errorResponse('Échec de l\'envoi du SMS de confirmation', null, 'EVENT_CONFIRMATION_SMS_FAILED')
-      );
-    }
-  }
-
-  /**
-   * Envoie un SMS OTP
-   */
-  async sendOTPSMS(req, res) {
-    try {
-      const { phoneNumber, otpCode, purpose, options = {} } = req.body;
-      
-      logger.sms('Sending OTP SMS', {
-        phoneNumber: smsService.maskPhoneNumber(phoneNumber),
-        purpose,
-        ip: req.ip
-      });
-
-      const result = await smsService.sendOTPSMS(phoneNumber, otpCode, purpose, {
-        ...options,
-        ip: req.ip
-      });
-
-      return res.status(201).json(
-        notificationResultResponse(result)
-      );
-    } catch (error) {
-      logger.error('Failed to send OTP SMS', {
-        error: error.message,
-        phoneNumber: smsService.maskPhoneNumber(req.body.phoneNumber),
-        purpose: req.body.purpose
-      });
-
-      return res.status(500).json(
-        errorResponse('Échec de l\'envoi du SMS OTP', null, 'OTP_SMS_FAILED')
-      );
-    }
-  }
-
-  /**
-   * Vérifie la santé du service de notification
-   */
-  async healthCheck(req, res) {
-    try {
-      const [emailHealth, smsHealth] = await Promise.all([
-        emailService.healthCheck(),
-        smsService.healthCheck()
-      ]);
-
-      const overallHealthy = emailHealth.healthy || smsHealth.healthy;
-
-      return res.status(200).json(
-        successResponse('Service de notification opérationnel', {
-          email: emailHealth,
-          sms: smsHealth,
-          overall: {
-            healthy: overallHealthy,
-            providers: {
-              email: emailHealth.healthy,
-              sms: smsHealth.healthy
-            }
-          }
-        })
-      );
-    } catch (error) {
-      logger.error('Health check failed', {
-        error: error.message
-      });
-
-      return res.status(503).json(
-        errorResponse('Service de notification indisponible', null, 'HEALTH_CHECK_FAILED')
-      );
-    }
-  }
-
-  /**
-   * Récupère les statistiques du service
-   */
-  async getStats(req, res) {
-    try {
-      const [emailStats, smsStats, queueStats] = await Promise.all([
-        emailService.getStats(),
-        smsService.getStats(),
-        queueService.getQueueStats()
-      ]);
-
-      return res.status(200).json(
-        successResponse('Statistiques du service de notification', {
-          email: emailStats,
-          sms: smsStats,
-          queues: queueStats.stats
-        })
-      );
-    } catch (error) {
-      logger.error('Failed to get service stats', {
-        error: error.message
-      });
-
-      return res.status(500).json(
-        errorResponse('Échec de la récupération des statistiques', null, 'STATS_FAILED')
+        errorResponse('Failed to send test SMS')
       );
     }
   }
