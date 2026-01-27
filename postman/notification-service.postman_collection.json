@@ -1,0 +1,379 @@
+{
+  "info": {
+    "name": "Notification Service API",
+    "description": "API collection for Notification Service with centralized security and validation",
+    "version": "2.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3002",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "your_jwt_token_here",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Email Notifications",
+      "item": [
+        {
+          "name": "Send Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"user@example.com\",\n  \"subject\": \"Welcome to Event Planner\",\n  \"template\": \"welcome\",\n  \"data\": {\n    \"userName\": \"John Doe\",\n    \"eventName\": \"Tech Conference 2024\"\n  },\n  \"priority\": \"normal\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/email/send",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "email", "send"]
+            },
+            "description": "Send email notification (requires notifications.email.send permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "Send Bulk Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipients\": [\n    \"user1@example.com\",\n    \"user2@example.com\",\n    \"user3@example.com\"\n  ],\n  \"subject\": \"Event Reminder\",\n  \"template\": \"event_reminder\",\n  \"data\": {\n    \"eventName\": \"Tech Conference 2024\",\n    \"eventDate\": \"2024-06-15\"\n  },\n  \"priority\": \"high\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/email/bulk",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "email", "bulk"]
+            },
+            "description": "Send bulk email notifications (requires notifications.email.bulk permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Email Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/email/{{notification_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "email", "{{notification_id}}", "status"]
+            },
+            "description": "Get email notification status (requires notifications.email.read permission)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "SMS Notifications",
+      "item": [
+        {
+          "name": "Send SMS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"+33612345678\",\n  \"message\": \"Your ticket for Tech Conference 2024 is confirmed!\",\n  \"priority\": \"normal\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/sms/send",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "sms", "send"]
+            },
+            "description": "Send SMS notification (requires notifications.sms.send permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "Send Bulk SMS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipients\": [\n    \"+33612345678\",\n    \"+33687654321\",\n    \"+33698765432\"\n  ],\n  \"message\": \"Event reminder: Tech Conference 2024 starts tomorrow!\",\n  \"priority\": \"high\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/sms/bulk",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "sms", "bulk"]
+            },
+            "description": "Send bulk SMS notifications (requires notifications.sms.bulk permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get SMS Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/sms/{{notification_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "sms", "{{notification_id}}", "status"]
+            },
+            "description": "Get SMS notification status (requires notifications.sms.read permission)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Push Notifications",
+      "item": [
+        {
+          "name": "Send Push Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{user_id}}\",\n  \"title\": \"Event Update\",\n  \"message\": \"Your event schedule has been updated\",\n  \"data\": {\n    \"eventId\": \"{{event_id}}\",\n    \"type\": \"schedule_update\"\n  },\n  \"priority\": \"normal\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/push/send",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "push", "send"]
+            },
+            "description": "Send push notification (requires notifications.push.send permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "Send Bulk Push",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userIds\": [\"{{user_id_1}}\", \"{{user_id_2}}\", \"{{user_id_3}}\"],\n  \"title\": \"Event Announcement\",\n  \"message\": \"New event available: Tech Conference 2024\",\n  \"data\": {\n    \"eventId\": \"{{event_id}}\",\n    \"type\": \"event_announcement\"\n  },\n  \"priority\": \"high\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/push/bulk",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "push", "bulk"]
+            },
+            "description": "Send bulk push notifications (requires notifications.push.bulk permission)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Templates",
+      "item": [
+        {
+          "name": "Create Template",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"event_confirmation\",\n  \"type\": \"email\",\n  \"subject\": \"Event Registration Confirmed\",\n  \"content\": \"Hello {{userName}},\\n\\nYour registration for {{eventName}} has been confirmed!\\n\\nEvent Details:\\nDate: {{eventDate}}\\nLocation: {{eventLocation}}\\n\\nWe look forward to seeing you there!\\n\\nBest regards,\\nThe Event Planner Team\",\n  \"variables\": [\"userName\", \"eventName\", \"eventDate\", \"eventLocation\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/templates",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "templates"]
+            },
+            "description": "Create notification template (requires notifications.templates.create permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Templates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/templates?type=email",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "templates"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "email",
+                  "description": "Filter by template type"
+                }
+              ]
+            },
+            "description": "Get notification templates (requires notifications.templates.read permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Template",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject\": \"Updated Event Registration Confirmed\",\n  \"content\": \"Hello {{userName}},\\n\\nYour registration for {{eventName}} has been confirmed!\\n\\nUpdated Event Details:\\nDate: {{eventDate}}\\nLocation: {{eventLocation}}\\n\\nWe look forward to seeing you there!\\n\\nBest regards,\\nThe Event Planner Team\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/templates/{{template_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "templates", "{{template_id}}"]
+            },
+            "description": "Update notification template (requires notifications.templates.update permission)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Queue Management",
+      "item": [
+        {
+          "name": "Get Queue Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/queues/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "queues", "stats"]
+            },
+            "description": "Get queue statistics (requires notifications.queues.read permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "Process Queue",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/queues/process",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "queues", "process"]
+            },
+            "description": "Manually process notification queue (requires notifications.queues.process permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "Clear Queue",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/queues/clear",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "queues", "clear"]
+            },
+            "description": "Clear notification queue (requires notifications.queues.clear permission)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health & Monitoring",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Basic health check (no authentication required)"
+          },
+          "response": []
+        },
+        {
+          "name": "Service Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "status"]
+            },
+            "description": "Get detailed service status (requires notifications.status.read permission)"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Auto-refresh token if needed",
+          "if (pm.collectionVariables.get('auth_token') === 'your_jwt_token_here') {",
+          "    pm.collectionVariables.set('auth_token', 'your_real_jwt_token');",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ]
+}
