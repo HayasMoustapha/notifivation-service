@@ -1,4 +1,4 @@
-const { ErrorHandlerFactory } = require('../../../shared/middlewares/error-handler-factory');
+const { ErrorHandlerFactory } = require('../../../shared');
 
 /**
  * Error Handler personnalisé pour Notification Service
