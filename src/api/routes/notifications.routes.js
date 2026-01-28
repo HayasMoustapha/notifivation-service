@@ -121,9 +121,6 @@ router.post('/bulk/mixed',
 // GET /api/notifications/job/:jobId/status - Récupérer le statut d'un job
 router.get('/job/:jobId/status',
   SecurityMiddleware.withPermissions('notifications.jobs.read'),
-  ValidationMiddleware.validateParams({
-    jobId: Joi.string().required()
-  }),
   notificationsController.getJobStatus
 );
 
@@ -207,6 +204,7 @@ router.post('/otp/sms',
 
 // GET /api/notifications/health - Vérifier la santé du service
 router.get('/health',
+  SecurityMiddleware.withPermissions('notifications.health.read'),
   notificationsController.healthCheck
 );
 
@@ -220,6 +218,7 @@ router.get('/stats',
 
 // POST /api/notifications/webhooks/email - Webhook pour les emails externes
 router.post('/webhooks/email',
+  SecurityMiddleware.withPermissions('notifications.webhooks.external'),
   ValidationMiddleware.validate({
     headers: Joi.object({
       'x-api-key': Joi.string().required()
@@ -239,6 +238,7 @@ router.post('/webhooks/email',
 
 // POST /api/notifications/webhooks/sms - Webhook pour les SMS externes
 router.post('/webhooks/sms',
+  SecurityMiddleware.withPermissions('notifications.webhooks.external'),
   ValidationMiddleware.validate({
     headers: Joi.object({
       'x-api-key': Joi.string().required()
@@ -256,6 +256,7 @@ router.post('/webhooks/sms',
 
 // POST /api/notifications/webhooks/bulk - Webhook pour les notifications en lot
 router.post('/webhooks/bulk',
+  SecurityMiddleware.withPermissions('notifications.webhooks.external'),
   ValidationMiddleware.validate({
     headers: Joi.object({
       'x-api-key': Joi.string().required()
@@ -277,6 +278,7 @@ router.post('/webhooks/bulk',
 
 // POST /api/notifications/integrations/stripe - Webhook Stripe
 router.post('/integrations/stripe',
+  SecurityMiddleware.withPermissions('notifications.webhooks.stripe'),
   ValidationMiddleware.validate({
     headers: Joi.object({
       'stripe-signature': Joi.string().required()
@@ -342,6 +344,7 @@ router.post('/integrations/stripe',
 
 // POST /api/notifications/integrations/github - Webhook GitHub
 router.post('/integrations/github',
+  SecurityMiddleware.withPermissions('notifications.webhooks.github'),
   ValidationMiddleware.validate({
     headers: Joi.object({
       'x-hub-signature-256': Joi.string().required()
@@ -393,7 +396,7 @@ router.post('/integrations/github',
 );
 
 // Route d'information pour le service
-router.get('/', (req, res) => {
+router.get('/', SecurityMiddleware.withPermissions('notifications.info.read'), (req, res) => {
   res.json({
     service: 'Notification API',
     version: '1.0.0',
