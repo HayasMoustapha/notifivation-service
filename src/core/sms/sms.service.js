@@ -391,6 +391,9 @@ class SMSService {
    * @returns {string} Numéro formaté
    */
   formatPhoneNumber(phoneNumber) {
+    if (!phoneNumber) {
+      return '';
+    }
     // Supprimer tous les caractères non numériques sauf le +
     return phoneNumber.replace(/[^\d+]/g, '');
   }
@@ -401,11 +404,15 @@ class SMSService {
    * @returns {string} Numéro masqué
    */
   maskPhoneNumber(phoneNumber) {
-    if (!phoneNumber || phoneNumber.length < 4) {
+    if (!phoneNumber || typeof phoneNumber !== 'string' || phoneNumber.length < 4) {
       return '***';
     }
     
     const formatted = this.formatPhoneNumber(phoneNumber);
+    if (!formatted || formatted.length < 4) {
+      return '***';
+    }
+    
     const visible = formatted.substring(0, 3) + '***' + formatted.substring(formatted.length - 2);
     return visible;
   }

@@ -8,6 +8,10 @@ const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const morgan = require('morgan');
 
+// CONFIGURATION JWT UNIFIÉ - ÉTAPE CRUCIALE
+const UnifiedJWTSecret = require('../../shared/config/unified-jwt-secret');
+UnifiedJWTSecret.configureService('notification-service');
+
 const logger = require('./utils/logger');
 const healthRoutes = require('./health/health.routes');
 const notificationsRoutes = require('./api/routes/notifications.routes');
@@ -136,6 +140,9 @@ class NotificationServer {
    * Configure les routes
    */
   setupRoutes() {
+    // Middleware d'authentification robuste pour les routes protégées
+    const RobustAuthMiddleware = require('../../shared/middlewares/robust-auth-middleware');
+    
     // Route racine
     this.app.get('/', (req, res) => {
       res.json({
@@ -153,10 +160,11 @@ class NotificationServer {
       });
     });
 
-    // Routes de santé
+    // Routes de santé (publiques)
     this.app.use('/health', healthRoutes);
 
-    // Routes API
+    // Routes API protégées
+    this.app.use('/api', RobustAuthMiddleware.authenticate());
     this.app.use('/api/notifications', notificationsRoutes);
 
     // Route API racine
