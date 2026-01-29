@@ -1,0 +1,778 @@
+{
+	"info": {
+		"_postman_id": "notification-service-collection",
+		"name": "Notification Service - Technical API",
+		"description": "Collection complète pour Notification Service (Port 3002). Service technique d'envoi d'emails/SMS.\n\n🔥 RÈGLE STRICTE: Service technique - PAS d'authentification utilisateur.\nLes bodies ne contiennent QUE les champs réels des schémas SQL.\n❌ INTERDITS: id, created_at, updated_at (gérés automatiquement)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3002/api",
+			"type": "string"
+		},
+		{
+			"key": "testNotificationId",
+			"value": "550e8400-e29b-41d4-a716-446655440000",
+			"type": "string"
+		},
+		{
+			"key": "testBatchId",
+			"value": "550e8400-e29b-41d4-a716-446655440001",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "📧 Emails",
+			"item": [
+				{
+					"name": "Send Email",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Email sent successfully\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    pm.expect(jsonData.data).to.have.property('status');",
+									"});",
+									"",
+									"// Store notification ID for future tests",
+									"if (pm.response.json().data && pm.response.json().data.id) {",
+									"    pm.variables.set('testNotificationId', pm.response.json().data.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"email\",\n  \"subject\": \"Confirmation d'inscription à l'événement\",\n  \"content\": \"Bonjour,\\n\\nNous vous confirmons votre inscription à notre événement.\\n\\nCordialement,\\nL'équipe organisation\",\n  \"html_content\": \"<h1>Bonjour,</h1><p>Nous vous confirmons votre inscription à notre événement.</p><p>Cordialement,<br>L'équipe organisation</p>\",\n  \"recipient_email\": \"participant@example.com\",\n  \"recipient_name\": \"Jean Participant\",\n  \"sender_id\": \"550e8400-e29b-41d4-a716-446655440002\",\n  \"event_id\": \"550e8400-e29b-41d4-a716-446655440003\",\n  \"provider\": \"sendgrid\",\n  \"priority\": 1\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notifications/email",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notifications",
+								"email"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Queue Email",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Email queued successfully\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    pm.expect(jsonData.data.status).to.eql('queued');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"email\",\n  \"subject\": \"Email en file d'attente\",\n  \"content\": \"Cet email sera traité de manière asynchrone.\",\n  \"recipient_email\": \"async@example.com\",\n  \"recipient_name\": \"Test Async\",\n  \"scheduled_at\": \"2025-01-30T10:00:00Z\",\n  \"provider\": \"sendgrid\",\n  \"priority\": 2\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notifications/email/queue",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notifications",
+								"email",
+								"queue"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Bulk Email",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Bulk email sent successfully\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('batch_id');",
+									"    pm.expect(jsonData.data).to.have.property('total_sent');",
+									"});",
+									"",
+									"// Store batch ID for future tests",
+									"if (pm.response.json().data && pm.response.json().data.batch_id) {",
+									"    pm.variables.set('testBatchId', pm.response.json().data.batch_id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"email\",\n  \"subject\": \"Information importante sur votre événement\",\n  \"content\": \"Cher participant,\\n\\nVoici des informations importantes concernant votre événement.\\n\\nMerci de votre présence.\",\n  \"recipients\": [\n    {\n      \"email\": \"user1@example.com\",\n      \"name\": \"Utilisateur 1\"\n    },\n    {\n      \"email\": \"user2@example.com\",\n      \"name\": \"Utilisateur 2\"\n    },\n    {\n      \"email\": \"user3@example.com\",\n      \"name\": \"Utilisateur 3\"\n    }\n  ],\n  \"provider\": \"sendgrid\",\n  \"priority\": 1\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notifications/email/bulk",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notifications",
+								"email",
+								"bulk"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Envoi d'emails transactionnels et en lot"
+		},
+		{
+			"name": "📱 SMS",
+			"item": [
+				{
+					"name": "Send SMS",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"SMS sent successfully\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    pm.expect(jsonData.data).to.have.property('status');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"sms\",\n  \"message\": \"Votre code de confirmation est 123456. Valide dans 5 minutes.\",\n  \"recipient_phone\": \"+33612345678\",\n  \"recipient_name\": \"Jean Dupont\",\n  \"sender_id\": \"550e8400-e29b-41d4-a716-446655440002\",\n  \"event_id\": \"550e8400-e29b-41d4-a716-446655440003\",\n  \"provider\": \"twilio\",\n  \"priority\": 1,\n  \"country_code\": \"+33\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notifications/sms",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notifications",
+								"sms"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Queue SMS",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"SMS queued successfully\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    pm.expect(jsonData.data.status).to.eql('queued');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"sms\",\n  \"message\": \"SMS programmé pour envoi asynchrone.\",\n  \"recipient_phone\": \"+33687654321\",\n  \"recipient_name\": \"Test Async SMS\",\n  \"scheduled_at\": \"2025-01-30T15:00:00Z\",\n  \"provider\": \"twilio\",\n  \"priority\": 2,\n  \"country_code\": \"+33\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notifications/sms/queue",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notifications",
+								"sms",
+								"queue"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Bulk SMS",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Bulk SMS sent successfully\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('batch_id');",
+									"    pm.expect(jsonData.data).to.have.property('total_sent');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"sms\",\n  \"message\": \"Rappel: Votre événement commence demain à 10h.\",\n  \"recipients\": [\n    {\n      \"phone\": \"+33611111111\",\n      \"name\": \"Participant 1\"\n    },\n    {\n      \"phone\": \"+33622222222\",\n      \"name\": \"Participant 2\"\n    },\n    {\n      \"phone\": \"+33633333333\",\n      \"name\": \"Participant 3\"\n    }\n  ],\n  \"provider\": \"twilio\",\n  \"priority\": 1,\n  \"country_code\": \"+33\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notifications/sms/bulk",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notifications",
+								"sms",
+								"bulk"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Envoi de SMS transactionnels et en lot"
+		},
+		{
+			"name": "📊 Mixed Notifications",
+			"item": [
+				{
+					"name": "Send Bulk Mixed",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Bulk mixed notifications sent successfully\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('batch_id');",
+									"    pm.expect(jsonData.data).to.have.property('email_sent');",
+									"    pm.expect(jsonData.data).to.have.property('sms_sent');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"notifications\": [\n    {\n      \"type\": \"email\",\n      \"subject\": \"Confirmation par email\",\n      \"content\": \"Votre participation est confirmée par email.\",\n      \"recipient_email\": \"user1@example.com\",\n      \"recipient_name\": \"User 1\",\n      \"provider\": \"sendgrid\"\n    },\n    {\n      \"type\": \"sms\",\n      \"message\": \"Confirmation par SMS: Événement confirmé!\",\n      \"recipient_phone\": \"+33611111111\",\n      \"recipient_name\": \"User 1\",\n      \"provider\": \"twilio\",\n      \"country_code\": \"+33\"\n    },\n    {\n      \"type\": \"email\",\n      \"subject\": \"Confirmation par email\",\n      \"content\": \"Votre participation est confirmée par email.\",\n      \"recipient_email\": \"user2@example.com\",\n      \"recipient_name\": \"User 2\",\n      \"provider\": \"sendgrid\"\n    },\n    {\n      \"type\": \"sms\",\n      \"message\": \"Confirmation par SMS: Événement confirmé!\",\n      \"recipient_phone\": \"+33622222222\",\n      \"recipient_name\": \"User 2\",\n      \"provider\": \"twilio\",\n      \"country_code\": \"+33\"\n    }\n  ],\n  \"priority\": 1\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notifications/bulk/mixed",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notifications",
+								"bulk",
+								"mixed"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Envoi mixte d'emails et SMS en lot"
+		},
+		{
+			"name": "📋 Status & Tracking",
+			"item": [
+				{
+					"name": "Get Notification Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Notification status retrieved successfully\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('status');",
+									"    pm.expect(jsonData.data).to.have.property('type');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/notifications/{{testNotificationId}}/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notifications",
+								"{{testNotificationId}}",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Notification History",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Notification history retrieved successfully\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/notifications/history?type=email&status=sent&limit=50&offset=0",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notifications",
+								"history"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "email"
+								},
+								{
+									"key": "status",
+									"value": "sent"
+								},
+								{
+									"key": "limit",
+									"value": "50"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Notification Statistics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Notification statistics retrieved successfully\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('stats');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/notifications/statistics?start_date=2025-01-01&end_date=2025-01-31&provider=sendgrid",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notifications",
+								"statistics"
+							],
+							"query": [
+								{
+									"key": "start_date",
+									"value": "2025-01-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2025-01-31"
+								},
+								{
+									"key": "provider",
+									"value": "sendgrid"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Suivi et statistiques des notifications"
+		},
+		{
+			"name": "📋 Templates",
+			"item": [
+				{
+					"name": "Create Template",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Template created successfully\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    pm.expect(jsonData.data).to.have.property('name');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"event_confirmation\",\n  \"type\": \"email\",\n  \"subject\": \"Confirmation de votre participation à {{event_name}}\",\n  \"html_content\": \"<h1>Bonjour {{participant_name}}</h1><p>Nous vous confirmons votre participation à l'événement <strong>{{event_name}}</strong>.</p><p>Date: {{event_date}}</p><p>Lieu: {{event_location}}</p>\",\n  \"text_content\": \"Bonjour {{participant_name}},\\n\\nNous vous confirmons votre participation à l'événement {{event_name}}.\\n\\nDate: {{event_date}}\\nLieu: {{event_location}}\\n\\nCordialement\",\n  \"variables\": [\"participant_name\", \"event_name\", \"event_date\", \"event_location\"],\n  \"default_data\": {\n    \"event_name\": \"Événement par défaut\",\n    \"event_date\": \"Date à définir\",\n    \"event_location\": \"Lieu à définir\"\n  },\n  \"description\": \"Template de confirmation d'événement\",\n  \"category\": \"event\",\n  \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notification-templates",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notification-templates"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Templates",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Templates retrieved successfully\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/notification-templates?type=email&is_active=true&page=1&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notification-templates"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "email"
+								},
+								{
+									"key": "is_active",
+									"value": "true"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Template By Name",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Template retrieved successfully\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('name');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/notification-templates/event_confirmation",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notification-templates",
+								"event_confirmation"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Gestion des templates de notification"
+		},
+		{
+			"name": "📦 Batches",
+			"item": [
+				{
+					"name": "Get Batch Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Batch status retrieved successfully\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('status');",
+									"    pm.expect(jsonData.data).to.have.property('processed_count');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/notification-batches/{{testBatchId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notification-batches",
+								"{{testBatchId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Batches",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Batches retrieved successfully\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/notification-batches?status=completed&page=1&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notification-batches"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "completed"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Suivi des traitements par lots"
+		}
+	]
+}
