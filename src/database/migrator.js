@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { database } = require('../config/database');
+const { getDatabase } = require('../config/database');
 const logger = require('../utils/logger');
 
 /**
@@ -9,7 +9,7 @@ const logger = require('../utils/logger');
  */
 class DatabaseMigrator {
   constructor() {
-    this.migrationsPath = path.join(__dirname, '../database/migrations');
+    this.migrationsPath = path.join(__dirname, './migrations');
   }
 
   /**
@@ -18,7 +18,7 @@ class DatabaseMigrator {
   async initialize() {
     try {
       // Créer la table des migrations si elle n'existe pas
-      await database.query(`
+      await getDatabase().query(`
         CREATE TABLE IF NOT EXISTS migrations (
           id SERIAL PRIMARY KEY,
           version VARCHAR(50) NOT NULL UNIQUE,
@@ -64,7 +64,7 @@ class DatabaseMigrator {
    */
   async getExecutedMigrations() {
     try {
-      const result = await database.query(
+      const result = await getDatabase().query(
         'SELECT version, filename, checksum FROM migrations ORDER BY version'
       );
       return result.rows;
@@ -90,7 +90,7 @@ class DatabaseMigrator {
         if (executedMigration.checksum !== currentChecksum) {
           if (process.env.DB_FORCE_MIGRATION === 'true') {
             logger.warn(`Migration ${filename} checksum mismatch, forcing update due to DB_FORCE_MIGRATION`);
-            await database.query(
+            await getDatabase().query(
               'UPDATE migrations SET checksum = $1 WHERE version = $2',
               [currentChecksum, executedMigration.version]
             );
@@ -127,25 +127,25 @@ class DatabaseMigrator {
       cleanContent = cleanContent.replace(/CREATE DATABASE.*?;/g, '');
       cleanContent = cleanContent.replace(/\\c\s+\w+;?/g, '');
 
-      await database.query('BEGIN');
+      await getDatabase().query('BEGIN');
       
       try {
         // Exécuter la migration
-        await database.query(cleanContent);
+        await getDatabase().query(cleanContent);
         
         // Enregistrer la migration comme exécutée
         const version = filename.replace('.sql', '');
-        await database.query(
+        await getDatabase().query(
           'INSERT INTO migrations (version, filename, checksum) VALUES ($1, $2, $3)',
           [version, filename, checksum]
         );
         
-        await database.query('COMMIT');
+        await getDatabase().query('COMMIT');
         logger.info(`Migration ${filename} executed successfully`);
         
         return { success: true, filename };
       } catch (error) {
-        await database.query('ROLLBACK');
+        await getDatabase().query('ROLLBACK');
         throw error;
       }
     } catch (error) {
@@ -206,7 +206,7 @@ class DatabaseMigrator {
     }
     
     try {
-      await database.query('TRUNCATE TABLE migrations RESTART IDENTITY');
+      await getDatabase().query('TRUNCATE TABLE migrations RESTART IDENTITY');
       logger.info('Migration table reset');
     } catch (error) {
       logger.error('Failed to reset migrations:', error);

@@ -6,8 +6,9 @@
  * L'authentification est gérée par event-planner-core
  */
 
-const database = require('./database');
+const { getDatabase, databaseConfig } = require('./database');
 
 module.exports = {
-  database
+  getDatabase,
+  databaseConfig
 };

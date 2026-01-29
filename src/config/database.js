@@ -13,37 +13,46 @@ const databaseConfig = {
   connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT) || 2000,
 };
 
-// Créer le pool de connexions
-const database = new Pool(databaseConfig);
+// Pool de connexions - créé de manière lazy
+let database = null;
 
-// Gestion des erreurs du pool
-database.on('error', (err) => {
-  logger.error('Database pool error:', {
-    error: err.message,
-    stack: err.stack
-  });
-});
+// Fonction pour obtenir le pool de connexions (lazy initialization)
+const getDatabase = () => {
+  if (!database) {
+    database = new Pool(databaseConfig);
 
-// Test de connexion
-database.connect()
-  .then(client => {
-    logger.info('Connected to PostgreSQL database', {
-      host: databaseConfig.host,
-      port: databaseConfig.port,
-      database: databaseConfig.database
+    // Gestion des erreurs du pool
+    database.on('error', (err) => {
+      logger.error('Database pool error:', {
+        error: err.message,
+        stack: err.stack
+      });
     });
-    client.release();
-  })
-  .catch(err => {
-    logger.error('Failed to connect to database:', {
-      error: err.message,
-      host: databaseConfig.host,
-      port: databaseConfig.port,
-      database: databaseConfig.database
-    });
-  });
+
+    // Test de connexion
+    database.connect()
+      .then(client => {
+        logger.info('Connected to PostgreSQL database', {
+          host: databaseConfig.host,
+          port: databaseConfig.port,
+          database: databaseConfig.database
+        });
+        client.release();
+      })
+      .catch(err => {
+        logger.error('Failed to connect to database:', {
+          error: err.message,
+          host: databaseConfig.host,
+          port: databaseConfig.port,
+          database: databaseConfig.database
+        });
+      });
+  }
+  return database;
+};
 
 module.exports = {
-  database,
+  database: null, // Pour compatibilité, mais utiliser getDatabase()
+  getDatabase,
   databaseConfig
 };

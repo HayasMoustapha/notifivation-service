@@ -174,8 +174,8 @@ class NotificationServer {
       });
     });
 
-    // ❌ ROUTE 404 : Gestion des routes non trouvées
-    this.app.use('*', (req, res) => {
+    // ❌ ROUTE 404 : Gestion des routes non trouvées (Express 5 syntax)
+    this.app.use('/{*path}', (req, res) => {
       logger.warn(`Route not found: ${req.method} ${req.path}`, {
         requestId: req.id,
         method: req.method,
@@ -242,7 +242,7 @@ class NotificationServer {
     try {
       // 🗄️ INITIALISATION DE LA BASE DE DONNÉES
       logger.info('Initializing database...');
-      await bootstrap();
+      await bootstrap.initialize();
       logger.info('Database initialized successfully');
 
       // 🚀 DÉMARRAGE DU SERVEUR HTTP
@@ -274,9 +274,10 @@ class NotificationServer {
           
           try {
             // Fermeture des connexions à la base de données
-            const database = require('./database');
-            if (database.pool) {
-              await database.pool.end();
+            const { getDatabase } = require('./config/database');
+            const database = getDatabase();
+            if (database) {
+              await database.end();
               logger.info('Database connections closed');
             }
 

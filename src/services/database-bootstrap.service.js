@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const { Pool } = require('pg');
 const MigrationCreator = require('../shared/migration-creator');
 
-// Créer une connexion à la base de données (après qu'elle ait été créée)
+// Créer une connexion à la base de données (lazy - après qu'elle ait été créée)
 const createConnection = () => {
   return new Pool({
     host: process.env.DB_HOST || 'localhost',
@@ -16,15 +16,22 @@ const createConnection = () => {
   });
 };
 
-const connection = createConnection();
+// Connexion lazy - créée uniquement après ensureDatabaseExists()
+let connection = null;
+const getConnection = () => {
+  if (!connection) {
+    connection = createConnection();
+  }
+  return connection;
+};
 
 /**
  * Service de Bootstrap de Base de Données simplifié
  */
 class DatabaseBootstrap {
   constructor() {
-    this.migrationsPath = path.join(__dirname, '../../database/migrations');
-    this.bootstrapPath = path.join(__dirname, '../../database/bootstrap');
+    this.migrationsPath = path.join(__dirname, '../../src/database/migrations');
+    this.bootstrapPath = path.join(__dirname, '../../src/database/bootstrap');
     this.lockId = 12345;
   }
 
@@ -128,7 +135,7 @@ class DatabaseBootstrap {
     // Ne pas utiliser MigrationCreator pour éviter les conflits
     // La migration 001_initial_schema.sql existe déjà
     
-    const client = await connection.connect();
+    const client = await getConnection().connect();
     try {
       const bootstrapSql = await fs.readFile(
         path.join(this.bootstrapPath, '001_create_schema_migrations.sql'),
@@ -187,7 +194,7 @@ class DatabaseBootstrap {
    * Vérifie si une migration a déjà été appliquée
    */
   async isMigrationApplied(migrationName) {
-    const client = await connection.connect();
+    const client = await getConnection().connect();
     try {
       const result = await client.query(
         'SELECT 1 FROM schema_migrations WHERE migration_name = $1',
@@ -203,7 +210,7 @@ class DatabaseBootstrap {
    * Applique une migration spécifique
    */
   async applyMigration(filePath, migrationName) {
-    const client = await connection.connect();
+    const client = await getConnection().connect();
     try {
       await client.query('BEGIN');
       
@@ -234,7 +241,7 @@ class DatabaseBootstrap {
    * Acquiert un verrou PostgreSQL
    */
   async acquireLock() {
-    const client = await connection.connect();
+    const client = await getConnection().connect();
     try {
       await client.query('BEGIN');
       const result = await client.query('SELECT pg_advisory_lock($1)', [this.lockId]);
@@ -249,7 +256,7 @@ class DatabaseBootstrap {
    * Libère le verrou PostgreSQL
    */
   async releaseLock() {
-    const client = await connection.connect();
+    const client = await getConnection().connect();
     try {
       await client.query('SELECT pg_advisory_unlock($1)', [this.lockId]);
       console.log('🔓 Verrou de bootstrap libéré');
