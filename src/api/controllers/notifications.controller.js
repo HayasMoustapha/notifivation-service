@@ -703,6 +703,108 @@ class NotificationsController {
       );
     }
   }
+
+  /**
+   * Récupère le statut d'une notification
+   */
+  async getNotificationStatus(req, res) {
+    try {
+      const { notificationId } = req.params;
+      
+      // TODO: Implémenter la récupération du statut depuis la base de données
+      // Pour l'instant, retourner une réponse simulée
+      
+      return res.status(200).json(
+        successResponse('Statut de la notification récupéré', {
+          notificationId,
+          status: 'sent',
+          sentAt: new Date().toISOString(),
+          provider: 'sendgrid'
+        })
+      );
+    } catch (error) {
+      logger.error('Failed to get notification status', {
+        error: error.message,
+        notificationId: req.params.notificationId
+      });
+
+      return res.status(500).json(
+        errorResponse('Échec de la récupération du statut', null, 'STATUS_FAILED')
+      );
+    }
+  }
+
+  /**
+   * Récupère l'historique des notifications
+   */
+  async getNotificationHistory(req, res) {
+    try {
+      const { page = 1, limit = 50, type, status } = req.query;
+      
+      // TODO: Implémenter la récupération depuis la base de données
+      // Pour l'instant, retourner des données simulées
+      
+      return res.status(200).json(
+        successResponse('Historique des notifications récupéré', {
+          notifications: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            totalPages: 0
+          }
+        })
+      );
+    } catch (error) {
+      logger.error('Failed to get notification history', {
+        error: error.message,
+        query: req.query
+      });
+
+      return res.status(500).json(
+        errorResponse('Échec de la récupération de l\'historique', null, 'HISTORY_FAILED')
+      );
+    }
+  }
+
+  /**
+   * Récupère les statistiques des notifications
+   */
+  async getNotificationStatistics(req, res) {
+    try {
+      const { period = '7d' } = req.query;
+      
+      // TODO: Implémenter le calcul des statistiques depuis la base de données
+      // Pour l'instant, retourner des données simulées
+      
+      return res.status(200).json(
+        successResponse('Statistiques des notifications récupérées', {
+          period,
+          totalSent: 0,
+          totalFailed: 0,
+          totalPending: 0,
+          byType: {
+            email: { sent: 0, failed: 0, pending: 0 },
+            sms: { sent: 0, failed: 0, pending: 0 }
+          },
+          byProvider: {
+            sendgrid: { sent: 0, failed: 0 },
+            twilio: { sent: 0, failed: 0 },
+            vonage: { sent: 0, failed: 0 }
+          }
+        })
+      );
+    } catch (error) {
+      logger.error('Failed to get notification statistics', {
+        error: error.message,
+        period: req.query.period
+      });
+
+      return res.status(500).json(
+        errorResponse('Échec de la récupération des statistiques', null, 'STATISTICS_FAILED')
+      );
+    }
+  }
 }
 
 module.exports = new NotificationsController();
