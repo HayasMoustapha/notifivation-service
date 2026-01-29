@@ -1,153 +1,132 @@
+/**
+ * 📧 ROUTES NOTIFICATIONS
+ * 
+ * RÔLE : Routes techniques pour l'envoi de notifications
+ * UTILISATION : Emails transactionnels, SMS, files d'attente
+ * 
+ * NOTE : Service technique sans authentification
+ * La sécurité est gérée par event-planner-core
+ */
+
 const express = require('express');
 const router = express.Router();
 const notificationsController = require('../controllers/notifications.controller');
 const { validateBody, validateParams, schemas } = require('../../middleware/validation');
 
-/**
- * Routes pour les notifications - Service de notification pur
- */
+// ========================================
+// 📧 ROUTES EMAILS
+// ========================================
 
-// POST /api/notifications/email - Envoyer un email transactionnel
+/**
+ * 📤 ENVOYER UN EMAIL
+ * POST /api/notifications/email
+ * Envoie un email transactionnel immédiatement
+ */
 router.post('/email',
   validateBody(schemas.sendEmail),
   notificationsController.sendEmail
 );
 
-// POST /api/notifications/sms - Envoyer un SMS transactionnel
-router.post('/sms',
-  validateBody(schemas.sendSMS),
-  notificationsController.sendSMS
-);
-
-// POST /api/notifications/email/queue - Mettre en file d'attente un email
+/**
+ * 📤 METTRE EN FILE D'ATTENTE UN EMAIL
+ * POST /api/notifications/email/queue
+ * Met un email en file d'attente pour traitement asynchrone
+ */
 router.post('/email/queue',
   validateBody(schemas.sendEmail),
   notificationsController.queueEmail
 );
 
-// POST /api/notifications/sms/queue - Mettre en file d'attente un SMS
-router.post('/sms/queue',
-  validateBody(schemas.sendSMS),
-  notificationsController.queueSMS
-);
-
-// POST /api/notifications/email/bulk - Envoyer des emails en lot
+/**
+ * 📤 ENVOYER EMAILS EN LOT
+ * POST /api/notifications/email/bulk
+ * Envoie plusieurs emails en une seule requête
+ */
 router.post('/email/bulk',
   validateBody(schemas.sendBulkEmail),
   notificationsController.sendBulkEmail
 );
 
-// POST /api/notifications/sms/bulk - Envoyer des SMS en lot
+// ========================================
+// 📱 ROUTES SMS
+// ========================================
+
+/**
+ * 📤 ENVOYER UN SMS
+ * POST /api/notifications/sms
+ * Envoie un SMS transactionnel immédiatement
+ */
+router.post('/sms',
+  validateBody(schemas.sendSMS),
+  notificationsController.sendSMS
+);
+
+/**
+ * 📤 METTRE EN FILE D'ATTENTE UN SMS
+ * POST /api/notifications/sms/queue
+ * Met un SMS en file d'attente pour traitement asynchrone
+ */
+router.post('/sms/queue',
+  validateBody(schemas.sendSMS),
+  notificationsController.queueSMS
+);
+
+/**
+ * 📤 ENVOYER SMS EN LOT
+ * POST /api/notifications/sms/bulk
+ * Envoie plusieurs SMS en une seule requête
+ */
 router.post('/sms/bulk',
   validateBody(schemas.sendBulkSMS),
   notificationsController.sendBulkSMS
 );
 
-// POST /api/notifications/bulk/mixed - Envoyer des notifications mixtes en lot
+// ========================================
+// 📊 ROUTES MIXTES
+// ========================================
+
+/**
+ * 📤 ENVOYER NOTIFICATIONS MIXTES EN LOT
+ * POST /api/notifications/bulk/mixed
+ * Envoie un mélange d'emails et SMS en lot
+ */
 router.post('/bulk/mixed',
   validateBody(schemas.sendBulkMixed),
   notificationsController.sendBulkMixed
 );
 
-// GET /api/notifications/job/:jobId/status - Récupérer le statut d'un job
-router.get('/job/:jobId/status',
-  validateParams(schemas.getJobStatus),
-  notificationsController.getJobStatus
+// ========================================
+// 📋 ROUTES DE STATUT ET SUIVI
+// ========================================
+
+/**
+ * 📊 STATUT NOTIFICATION
+ * GET /api/notifications/:notificationId/status
+ * Récupère le statut d'une notification
+ */
+router.get('/:notificationId/status',
+  validateParams(schemas.params.notificationId),
+  notificationsController.getNotificationStatus
 );
 
-// DELETE /api/notifications/job/:jobId/cancel - Annuler un job
-router.delete('/job/:jobId/cancel',
-  validateParams(schemas.cancelJob),
-  notificationsController.cancelJob
+/**
+ * 📋 HISTORIQUE NOTIFICATIONS
+ * GET /api/notifications/history
+ * Récupère l'historique des notifications
+ */
+router.get('/history',
+  validateBody(schemas.getHistory),
+  notificationsController.getNotificationHistory
 );
 
-// GET /api/notifications/queues/stats - Récupérer les statistiques des queues
-router.get('/queues/stats',
-  notificationsController.getQueueStats
-);
-
-// POST /api/notifications/queues/clean - Nettoyer les jobs terminés
-router.post('/queues/clean',
-  validateBody(schemas.cleanJobs),
-  notificationsController.cleanCompletedJobs
-);
-
-// Routes spécialisées pour les notifications courantes
-// Toutes utilisent la signature unifiée: template + data
-
-// POST /api/notifications/welcome/email - Email de bienvenue
-router.post('/welcome/email',
-  validateBody(schemas.sendEmail),
-  notificationsController.sendWelcomeEmail
-);
-
-// POST /api/notifications/welcome/sms - SMS de bienvenue
-router.post('/welcome/sms',
-  validateBody(schemas.sendSMS),
-  notificationsController.sendWelcomeSMS
-);
-
-// POST /api/notifications/password-reset/email - Email de réinitialisation de mot de passe
-router.post('/password-reset/email',
-  validateBody(schemas.sendEmail),
-  notificationsController.sendPasswordResetEmail
-);
-
-// POST /api/notifications/password-reset/sms - SMS de réinitialisation de mot de passe
-router.post('/password-reset/sms',
-  validateBody(schemas.sendSMS),
-  notificationsController.sendPasswordResetSMS
-);
-
-// POST /api/notifications/event-confirmation/email - Email de confirmation d'événement
-router.post('/event-confirmation/email',
-  validateBody(schemas.sendEmail),
-  notificationsController.sendEventConfirmationEmail
-);
-
-// POST /api/notifications/event-confirmation/sms - SMS de confirmation d'événement
-router.post('/event-confirmation/sms',
-  validateBody(schemas.sendSMS),
-  notificationsController.sendEventConfirmationSMS
-);
-
-// POST /api/notifications/otp/sms - SMS OTP
-router.post('/otp/sms',
-  validateBody(schemas.sendSMS),
-  notificationsController.sendOTPSMS
-);
-
-// Routes de santé et statistiques (pas de permission requise)
-
-// GET /api/notifications/health - Vérifier la santé du service
-router.get('/health',
-  notificationsController.healthCheck
-);
-
-// GET /api/notifications/stats - Récupérer les statistiques du service
-router.get('/stats',
-  notificationsController.getStats
-);
-
-// Routes pour les webhooks externes
-// Utilisent aussi la signature unifiée
-
-// POST /api/notifications/webhooks/email - Webhook pour les emails externes
-router.post('/webhooks/email',
-  validateBody(schemas.sendEmail),
-  notificationsController.sendEmail
-);
-
-// POST /api/notifications/webhooks/sms - Webhook pour les SMS externes
-router.post('/webhooks/sms',
-  validateBody(schemas.sendSMS),
-  notificationsController.sendSMS
-);
-
-// POST /api/notifications/webhooks/bulk - Webhook pour les notifications en lot externes
-router.post('/webhooks/bulk',
-  validateBody(schemas.sendBulkMixed),
-  notificationsController.sendBulkMixed
+/**
+ * 📈 STATISTIQUES NOTIFICATIONS
+ * GET /api/notifications/statistics
+ * Récupère les statistiques des notifications
+ */
+router.get('/statistics',
+  validateBody(schemas.getStatistics),
+  notificationsController.getNotificationStatistics
 );
 
 module.exports = router;

@@ -1,61 +1,94 @@
+/**
+ * NOTIFICATION SERVICE - SERVEUR PRINCIPAL
+ * 
+ * RÔLE : Service technique d'envoi de notifications
+ * UTILISATION : Emails transactionnels, SMS, files d'attente
+ * PORT : 3002
+ * 
+ * FONCTIONNEMENT :
+ * - Reçoit les requêtes de notification de event-planner-core
+ * - Traite les emails via SendGrid
+ * - Traite les SMS via Twilio/Vonage
+ * - Gère les files d'attente Redis pour traitement asynchrone
+ * 
+ * NOTE : Service technique sans authentification
+ * La sécurité est gérée par event-planner-core
+ */
+
 require('dotenv').config();
 
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const compression = require('compression');
-const rateLimit = require('express-rate-limit');
-const morgan = require('morgan');
+// Importation des modules nécessaires pour le serveur
+const express = require('express'); // Framework web Node.js
+const cors = require('cors'); // Middleware pour gérer le CORS (partage entre domaines)
+const helmet = require('helmet'); // Middleware de sécurité HTTP
+const compression = require('compression'); // Middleware pour compresser les réponses
+const rateLimit = require('express-rate-limit'); // Middleware pour limiter les requêtes
+const morgan = require('morgan'); // Middleware pour les logs de requêtes HTTP
 
-const logger = require('./utils/logger');
-const healthRoutes = require('./health/health.routes');
-const notificationsRoutes = require('./api/routes/notifications.routes');
-const bootstrap = require('./bootstrap');
+// Importation des modules locaux
+const logger = require('./utils/logger'); // Utilitaire de logging technique
+const healthRoutes = require('./health/health.routes'); // Routes de santé
+const notificationsRoutes = require('./api/routes/notifications.routes'); // Routes de notifications
+const bootstrap = require('./bootstrap'); // Initialisation de la base de données
 
 /**
- * Serveur principal du Notification Service
+ * CLASSE SERVEUR NOTIFICATION
+ * 
+ * Configure et démarre le serveur de notification technique
  */
 class NotificationServer {
   constructor() {
-    this.app = express();
-    this.port = process.env.PORT || 3002;
-    this.setupMiddleware();
-    this.setupRoutes();
-    this.setupErrorHandling();
+    this.app = express(); // Crée l'application Express
+    this.port = process.env.PORT || 3002; // Port du serveur (3002 par défaut)
+    this.setupMiddleware(); // Configure les middlewares
+    this.setupRoutes(); // Configure les routes
+    this.setupErrorHandling(); // Configure la gestion des erreurs
   }
 
   /**
-   * Configure les middlewares
+   * CONFIGURATION DES MIDDLEWARES
+   * 
+   * Les middlewares sont des fonctions qui s'exécutent avant les routes
    */
   setupMiddleware() {
-    // Sécurité
+    // MIDDLEWARE SÉCURITÉ : Protection HTTP avec Helmet
     this.app.use(helmet({
       contentSecurityPolicy: {
         directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'"],
-          imgSrc: ["'self'", "data:", "https:"],
+          defaultSrc: ["'self'"], // Sources par défaut
+          styleSrc: ["'self'", "'unsafe-inline'"], // Styles inline autorisés
+          scriptSrc: ["'self'"], // Scripts uniquement du même domaine
+          imgSrc: ["'self'", "data:", "https:"], // Images autorisées
         },
       },
     }));
 
-    // CORS
+    // MIDDLEWARE CORS : Permet les requêtes depuis d'autres domaines
     this.app.use(cors({
-      origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Webhook-Signature']
+      origin: process.env.CORS_ORIGIN || 'http://localhost:3000', // Domaine autorisé
+      credentials: true, // Autorise les cookies et authentification
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Méthodes HTTP autorisées
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Webhook-Signature'] // En-têtes autorisés
     }));
 
-    // Compression
+    // MIDDLEWARE COMPRESSION : Compresse les réponses pour améliorer la performance
     this.app.use(compression());
 
-    // Body parsing
-    this.app.use(express.json({ limit: '10mb' }));
-    this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+    // MIDDLEWARE RATE LIMITING : Limite le nombre de requêtes par IP
+    const limiter = rateLimit({
+      windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes par défaut
+      max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // 100 requêtes max par fenêtre
+      message: {
+        error: 'Too many requests',
+        message: 'Rate limit exceeded. Please try again later.',
+        code: 'RATE_LIMIT_EXCEEDED'
+      },
+      standardHeaders: true, // En-têtes standards RateLimit
+      legacyHeaders: false, // Pas d'en-têtes legacy
+    });
+    this.app.use('/api', limiter);
 
-    // Logging
+    // MIDDLEWARE LOGGING : Enregistre les requêtes HTTP
     if (process.env.NODE_ENV !== 'test') {
       this.app.use(morgan('combined', {
         stream: {
@@ -64,329 +97,244 @@ class NotificationServer {
       }));
     }
 
-    // Rate limiting général
-    const limiter = rateLimit({
-      windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-      max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
-      message: {
-        success: false,
-        message: 'Trop de requêtes, veuillez réessayer plus tard',
-        error: {
-          code: 'RATE_LIMIT_EXCEEDED'
-        }
-      },
-      standardHeaders: true,
-      legacyHeaders: false,
-    });
-    this.app.use('/api', limiter);
+    // MIDDLEWARE PARSING : Analyse les corps des requêtes
+    this.app.use(express.json({ limit: '10mb' })); // JSON avec limite de 10MB
+    this.app.use(express.urlencoded({ extended: true, limit: '10mb' })); // URL-encoded
 
-    // Rate limiting spécifique pour les emails
+    // 📊 MIDDLEWARE REQUEST ID : Ajoute un ID unique à chaque requête
+    this.app.use((req, res, next) => {
+      req.id = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      res.setHeader('X-Request-ID', req.id);
+      
+      // Log avec ID de requête pour traçabilité
+      logger.info(`Request started: ${req.method} ${req.path}`, {
+        requestId: req.id,
+        method: req.method,
+        path: req.path,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
+      next();
+    });
+
+    // 📧 RATE LIMITING SPÉCIFIQUE EMAILS : Protection contre le spam d'emails
     const emailLimiter = rateLimit({
       windowMs: 60 * 1000, // 1 minute
-      max: parseInt(process.env.EMAIL_RATE_LIMIT) || 10, // limit each IP to 10 emails per minute
+      max: parseInt(process.env.EMAIL_RATE_LIMIT) || 10, // 10 emails max par minute
       message: {
         success: false,
         message: 'Limite d\'emails atteinte, veuillez réessayer plus tard',
-        error: {
-          code: 'EMAIL_RATE_LIMIT_EXCEEDED'
-        }
+        error: { code: 'EMAIL_RATE_LIMIT_EXCEEDED' }
       }
     });
     this.app.use('/api/notifications/email', emailLimiter);
 
-    // Rate limiting spécifique pour les SMS
+    // 📱 RATE LIMITING SPÉCIFIQUE SMS : Protection contre le spam de SMS
     const smsLimiter = rateLimit({
       windowMs: 60 * 1000, // 1 minute
-      max: parseInt(process.env.SMS_RATE_LIMIT) || 5, // limit each IP to 5 SMS per minute
+      max: parseInt(process.env.SMS_RATE_LIMIT) || 5, // 5 SMS max par minute
       message: {
         success: false,
         message: 'Limite de SMS atteinte, veuillez réessayer plus tard',
-        error: {
-          code: 'SMS_RATE_LIMIT_EXCEEDED'
-        }
+        error: { code: 'SMS_RATE_LIMIT_EXCEEDED' }
       }
     });
     this.app.use('/api/notifications/sms', smsLimiter);
-
-    // Request logging
-    this.app.use((req, res, next) => {
-      logger.info('Incoming request', {
-        method: req.method,
-        url: req.url,
-        ip: req.ip,
-        userAgent: req.get('User-Agent'),
-        contentType: req.get('Content-Type')
-      });
-      next();
-    });
   }
 
   /**
-   * Configure les routes
+   * 🛣️ CONFIGURATION DES ROUTES
+   * 
+   * Définit toutes les routes du service de notification
    */
   setupRoutes() {
-    // Route racine
-    this.app.get('/', (req, res) => {
+    // 🏥 ROUTES DE SANTÉ : Vérification de l'état du service
+    this.app.use('/health', healthRoutes);
+
+    // 📧 ROUTES DE NOTIFICATIONS : Traitement des emails et SMS
+    this.app.use('/api/notifications', notificationsRoutes);
+
+    // 📊 ROUTE INFO : Informations sur le service (pour monitoring)
+    this.app.get('/api/info', (req, res) => {
       res.json({
         service: 'Notification Service',
-        version: process.env.npm_package_version || '1.0.0',
-        status: 'running',
+        version: '2.0.0',
+        description: 'Service technique d\'envoi de notifications',
+        environment: process.env.NODE_ENV || 'development',
+        uptime: process.uptime(),
         timestamp: new Date().toISOString(),
         capabilities: {
-          email: true,
-          sms: true,
+          email: !!process.env.SENDGRID_API_KEY,
+          sms: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
           bulk: true,
-          webhooks: true,
+          queue: !!process.env.REDIS_URL,
           templates: true
         }
       });
     });
 
-    // Routes de santé (publiques)
-    this.app.use('/health', healthRoutes);
-
-    // Routes API - sans authentification
-    this.app.use('/api/notifications', notificationsRoutes);
-
-    // Route API racine
-    this.app.get('/api', (req, res) => {
-      res.json({
-        service: 'Notification API',
-        version: process.env.npm_package_version || '1.0.0',
-        endpoints: {
-          notifications: '/api/notifications',
-          health: '/health'
-        },
-        documentation: '/api/docs',
-        timestamp: new Date().toISOString()
-      });
-    });
-
-    // Route pour les métriques Prometheus si activé
-    if (process.env.ENABLE_METRICS === 'true') {
-      const promClient = require('prom-client');
-      
-      // Créer un registre de métriques
-      const register = new promClient.Registry();
-      
-      // Ajouter des métriques par défaut
-      promClient.collectDefaultMetrics({ register });
-      
-      // Métriques personnalisées
-      const emailCounter = new promClient.Counter({
-        name: 'notification_emails_total',
-        help: 'Total number of emails sent',
-        labelNames: ['provider', 'template', 'status']
+    // ❌ ROUTE 404 : Gestion des routes non trouvées
+    this.app.use('*', (req, res) => {
+      logger.warn(`Route not found: ${req.method} ${req.path}`, {
+        requestId: req.id,
+        method: req.method,
+        path: req.path
       });
       
-      const smsCounter = new promClient.Counter({
-        name: 'notification_sms_total',
-        help: 'Total number of SMS sent',
-        labelNames: ['provider', 'template', 'status']
-      });
-      
-      const queueGauge = new promClient.Gauge({
-        name: 'notification_queue_jobs',
-        help: 'Number of jobs in queues',
-        labelNames: ['queue', 'status']
-      });
-      
-      register.registerMetric(emailCounter);
-      register.registerMetric(smsCounter);
-      register.registerMetric(queueGauge);
-      
-      // Endpoint pour les métriques
-      this.app.get('/metrics', async (req, res) => {
-        try {
-          res.set('Content-Type', register.contentType);
-          res.end(await register.metrics());
-        } catch (error) {
-          logger.error('Failed to generate metrics', {
-            error: error.message
-          });
-          res.status(500).end();
-        }
-      });
-    }
-
-    // Route 404
-    this.app.use((req, res) => {
       res.status(404).json({
         success: false,
-        message: 'Route non trouvée',
-        error: {
-          code: 'NOT_FOUND',
-          path: req.originalUrl
-        },
-        timestamp: new Date().toISOString()
+        error: 'Route not found',
+        message: `Cannot ${req.method} ${req.path}`,
+        code: 'ROUTE_NOT_FOUND',
+        requestId: req.id
       });
     });
   }
 
   /**
-   * Configure la gestion des erreurs
+   * 🚨 CONFIGURATION DE LA GESTION DES ERREURS
+   * 
+   * Gère toutes les erreurs du serveur de manière centralisée
    */
   setupErrorHandling() {
-    // Gestionnaire d'erreurs global
+    // 🚨 MIDDLEWARE D'ERREUR GLOBAL
     this.app.use((error, req, res, next) => {
-      logger.error('Unhandled error', {
+      // Log détaillé de l'erreur
+      logger.error('Unhandled error occurred', {
+        requestId: req.id,
         error: error.message,
         stack: error.stack,
         method: req.method,
-        url: req.url,
-        ip: req.ip,
-        userAgent: req.get('User-Agent')
+        path: req.path,
+        ip: req.ip
       });
 
-      // Ne pas envoyer le stack trace en production
-      const isDevelopment = process.env.NODE_ENV === 'development';
-      
-      const errorResponse = {
-        success: false,
-        message: isDevelopment ? error.message : 'Erreur interne du serveur',
-        error: {
-          code: 'INTERNAL_SERVER_ERROR'
-        },
-        timestamp: new Date().toISOString()
-      };
-
-      if (isDevelopment) {
-        errorResponse.error.stack = error.stack;
+      // En développement, on renvoie le stack complet
+      if (process.env.NODE_ENV === 'development') {
+        return res.status(500).json({
+          success: false,
+          error: 'Internal server error',
+          message: error.message,
+          stack: error.stack,
+          code: 'INTERNAL_ERROR',
+          requestId: req.id
+        });
       }
 
-      res.status(error.status || 500).json(errorResponse);
-    });
-
-    // Gestion des promesses rejetées non capturées
-    process.on('unhandledRejection', (reason, promise) => {
-      logger.error('Unhandled Rejection at:', {
-        promise,
-        reason: reason.message || reason
+      // En production, on masque les détails sensibles
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+        message: 'An unexpected error occurred',
+        code: 'INTERNAL_ERROR',
+        requestId: req.id
       });
-    });
-
-    // Gestion des exceptions non capturées
-    process.on('uncaughtException', (error) => {
-      logger.error('Uncaught Exception:', {
-        error: error.message,
-        stack: error.stack
-      });
-      
-      // Arrêter le serveur proprement
-      this.gracefulShutdown('SIGTERM');
-    });
-
-    // Gestion des signaux système
-    process.on('SIGTERM', () => {
-      logger.info('SIGTERM received');
-      this.gracefulShutdown('SIGTERM');
-    });
-
-    process.on('SIGINT', () => {
-      logger.info('SIGINT received');
-      this.gracefulShutdown('SIGINT');
     });
   }
 
   /**
-   * Démarre le serveur
+   * 🚀 DÉMARRAGE DU SERVEUR
+   * 
+   * Démarre le serveur et gère les erreurs de démarrage
    */
   async start() {
     try {
-      // Bootstrap automatique (crée la BD et applique les migrations)
-      await bootstrap.initialize();
-      
-      logger.info('🚀 Starting Notification Service server...');
-      
-      this.server = this.app.listen(this.port, () => {
+      // 🗄️ INITIALISATION DE LA BASE DE DONNÉES
+      logger.info('Initializing database...');
+      await bootstrap();
+      logger.info('Database initialized successfully');
+
+      // 🚀 DÉMARRAGE DU SERVEUR HTTP
+      const server = this.app.listen(this.port, () => {
         logger.info(`Notification Service started successfully`, {
           port: this.port,
           environment: process.env.NODE_ENV || 'development',
-          version: process.env.npm_package_version || '1.0.0',
-          pid: process.pid,
-          capabilities: {
-            email: true,
-            sms: true,
-            bulk: true,
-            webhooks: true,
-            templates: true,
-            metrics: process.env.ENABLE_METRICS === 'true'
+          nodeVersion: process.version,
+          timestamp: new Date().toISOString()
+        });
+
+        // 📊 LOG DES CAPACITÉS CONFIGURÉES
+        const capabilities = {
+          email: !!process.env.SENDGRID_API_KEY,
+          sms: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
+          queue: !!process.env.REDIS_URL,
+          templates: true
+        };
+        
+        logger.info('Notification capabilities configured', capabilities);
+      });
+
+      // 🛑 GESTION GRACIEUSE DE L'ARRÊT
+      const gracefulShutdown = async (signal) => {
+        logger.info(`Received ${signal}, starting graceful shutdown...`);
+        
+        server.close(async () => {
+          logger.info('HTTP server closed');
+          
+          try {
+            // Fermeture des connexions à la base de données
+            const database = require('./database');
+            if (database.pool) {
+              await database.pool.end();
+              logger.info('Database connections closed');
+            }
+
+            // Fermeture de la connexion Redis
+            const redis = require('./config/redis');
+            if (redis && redis.client) {
+              await redis.client.quit();
+              logger.info('Redis connection closed');
+            }
+            
+            logger.info('Graceful shutdown completed');
+            process.exit(0);
+          } catch (error) {
+            logger.error('Error during shutdown:', error);
+            process.exit(1);
           }
         });
-      });
-    } catch (error) {
-      logger.error('❌ Failed to start server:', error);
-      process.exit(1);
-    }
 
-    this.server.on('error', (error) => {
-      if (error.syscall !== 'listen') {
-        throw error;
-      }
-
-      const bind = typeof this.port === 'string'
-        ? 'Pipe ' + this.port
-        : 'Port ' + this.port;
-
-      switch (error.code) {
-        case 'EACCES':
-          logger.error(`${bind} requires elevated privileges`);
+        // Timeout forcé après 30 secondes
+        setTimeout(() => {
+          logger.error('Forced shutdown after timeout');
           process.exit(1);
-          break;
-        case 'EADDRINUSE':
-          logger.error(`${bind} is already in use`);
-          process.exit(1);
-          break;
-        default:
-          throw error;
-      }
-    });
-  }
+        }, 30000);
+      };
 
-  /**
-   * Arrête proprement le serveur
-   * @param {string} signal - Signal reçu
-   */
-  async gracefulShutdown(signal) {
-    logger.info(`Graceful shutdown initiated by ${signal}`);
+      // 🎧 ÉCOUTE DES SIGNAUX D'ARRÊT
+      process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+      process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-    try {
-      // Arrêter d'accepter de nouvelles connexions
-      if (this.server) {
-        this.server.close(() => {
-          logger.info('HTTP server closed');
-        });
-      }
-
-      // Arrêter les queues Redis si présentes
-      try {
-        const queueService = require('./core/queues/queue.service');
-        await queueService.shutdown();
-        logger.info('Redis queues shut down');
-      } catch (error) {
-        logger.error('Error shutting down Redis queues', {
-          error: error.message
-        });
-      }
-
-      logger.info('Graceful shutdown completed');
-      process.exit(0);
-    } catch (error) {
-      logger.error('Error during graceful shutdown', {
-        error: error.message
+      // 🚨 GESTION DES ERREURS NON CAPTURÉES
+      process.on('uncaughtException', (error) => {
+        logger.error('Uncaught Exception:', error);
+        gracefulShutdown('uncaughtException');
       });
+
+      process.on('unhandledRejection', (reason, promise) => {
+        logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+        gracefulShutdown('unhandledRejection');
+      });
+
+      return server;
+
+    } catch (error) {
+      logger.error('Failed to start Notification Service:', error);
       process.exit(1);
     }
   }
 }
 
-// Démarrer le serveur si ce fichier est exécuté directement
+// ========================================
+// 🚀 DÉMARRAGE DU SERVICE
+// ========================================
+
+// Démarrage du serveur si ce fichier est exécuté directement
 if (require.main === module) {
-  const server = new NotificationServer();
-  server.start().catch(error => {
-    logger.error('Failed to start server:', error);
-    process.exit(1);
-  });
+  const notificationServer = new NotificationServer();
+  notificationServer.start();
 }
 
+// Export pour les tests
 module.exports = NotificationServer;
