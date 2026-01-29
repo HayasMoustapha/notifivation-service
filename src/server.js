@@ -5,12 +5,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
-const mongoSanitize = require('express-mongo-sanitize');
 const morgan = require('morgan');
-
-// CONFIGURATION JWT UNIFIÉ - ÉTAPE CRUCIALE
-const UnifiedJWTSecret = require('../../shared/config/unified-jwt-secret');
-UnifiedJWTSecret.configureService('notification-service');
 
 const logger = require('./utils/logger');
 const healthRoutes = require('./health/health.routes');
@@ -59,16 +54,6 @@ class NotificationServer {
     // Body parsing
     this.app.use(express.json({ limit: '10mb' }));
     this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-    // Sécurité contre les injections NoSQL - CORRECTION : désactiver mongoSanitize défectueux
-    // TODO: Remplacer par une solution plus stable comme mongo-express-sanitize
-    // this.app.use(mongoSanitize({
-    //   onSanitize: ({ req, key, value }) => {
-    //     if (process.env.NODE_ENV === 'development') {
-    //       console.log(`🔒 Sanitized ${key}: ${value}`);
-    //     }
-    //   }
-    // }));
 
     // Logging
     if (process.env.NODE_ENV !== 'test') {
@@ -140,9 +125,6 @@ class NotificationServer {
    * Configure les routes
    */
   setupRoutes() {
-    // Middleware d'authentification robuste pour les routes protégées
-    const RobustAuthMiddleware = require('../../shared/middlewares/robust-auth-middleware');
-    
     // Route racine
     this.app.get('/', (req, res) => {
       res.json({
@@ -163,8 +145,7 @@ class NotificationServer {
     // Routes de santé (publiques)
     this.app.use('/health', healthRoutes);
 
-    // Routes API protégées
-    this.app.use('/api', RobustAuthMiddleware.authenticate());
+    // Routes API - sans authentification
     this.app.use('/api/notifications', notificationsRoutes);
 
     // Route API racine
