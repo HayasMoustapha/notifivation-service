@@ -711,16 +711,43 @@ class NotificationsController {
     try {
       const { notificationId } = req.params;
       
-      // TODO: Implémenter la récupération du statut depuis la base de données
-      // Pour l'instant, retourner une réponse simulée
+      const { getNotificationById } = require('../../core/database/notification.repository');
+      
+      const notification = await getNotificationById(notificationId);
+      
+      if (!notification) {
+        return res.status(404).json(
+          notFoundResponse('Notification non trouvée', 'NOTIFICATION_NOT_FOUND')
+        );
+      }
+      
+      const statusData = {
+        notificationId: notification.id,
+        type: notification.type,
+        status: notification.status,
+        recipient: notification.recipient_email || notification.recipient_phone,
+        recipientName: notification.recipient_name,
+        subject: notification.subject,
+        template: notification.template_name,
+        templateData: notification.template_data,
+        provider: notification.provider,
+        providerMessageId: notification.provider_message_id,
+        providerResponse: notification.provider_response,
+        priority: notification.priority,
+        createdAt: notification.created_at,
+        scheduledAt: notification.scheduled_at,
+        sentAt: notification.sent_at,
+        failedAt: notification.failed_at,
+        updatedAt: notification.updated_at,
+        errorMessage: notification.error_message,
+        retryCount: notification.retry_count,
+        eventId: notification.event_id,
+        batchId: notification.batch_id,
+        externalId: notification.external_id
+      };
       
       return res.status(200).json(
-        successResponse('Statut de la notification récupéré', {
-          notificationId,
-          status: 'sent',
-          sentAt: new Date().toISOString(),
-          provider: 'sendgrid'
-        })
+        successResponse('Statut de la notification récupéré', statusData)
       );
     } catch (error) {
       logger.error('Failed to get notification status', {
@@ -739,20 +766,49 @@ class NotificationsController {
    */
   async getNotificationHistory(req, res) {
     try {
-      const { page = 1, limit = 50, type, status } = req.query;
+      const { 
+        page = 1, 
+        limit = 50, 
+        type, 
+        status, 
+        recipient, 
+        eventId, 
+        batchId,
+        startDate,
+        endDate,
+        orderBy = 'created_at',
+        orderDirection = 'DESC'
+      } = req.query;
       
-      // TODO: Implémenter la récupération depuis la base de données
-      // Pour l'instant, retourner des données simulées
+      const { getNotificationHistory } = require('../../core/database/notification.repository');
+      
+      const offset = (parseInt(page) - 1) * parseInt(limit);
+      
+      const history = await getNotificationHistory({
+        limit: parseInt(limit),
+        offset,
+        type,
+        status,
+        recipient,
+        eventId,
+        batchId,
+        startDate,
+        endDate,
+        orderBy,
+        orderDirection
+      });
       
       return res.status(200).json(
         successResponse('Historique des notifications récupéré', {
-          notifications: [],
+          notifications: history.notifications,
           pagination: {
             page: parseInt(page),
             limit: parseInt(limit),
-            total: 0,
-            totalPages: 0
-          }
+            total: history.pagination.total,
+            totalPages: Math.ceil(history.pagination.total / parseInt(limit)),
+            hasMore: history.pagination.hasMore
+          },
+          filters: history.filters
         })
       );
     } catch (error) {
@@ -772,26 +828,57 @@ class NotificationsController {
    */
   async getNotificationStatistics(req, res) {
     try {
-      const { period = '7d' } = req.query;
+      const { 
+        period = '7d', 
+        eventId, 
+        batchId,
+        startDate,
+        endDate 
+      } = req.query;
       
-      // TODO: Implémenter le calcul des statistiques depuis la base de données
-      // Pour l'instant, retourner des données simulées
+      const { getNotificationStatistics } = require('../../core/database/notification.repository');
+      
+      // Calculer les dates selon la période
+      let calculatedStartDate = startDate;
+      let calculatedEndDate = endDate;
+      
+      if (!calculatedStartDate && !calculatedEndDate) {
+        const now = new Date();
+        switch (period) {
+          case '1d':
+            calculatedStartDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            break;
+          case '7d':
+            calculatedStartDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            break;
+          case '30d':
+            calculatedStartDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            break;
+          case '90d':
+            calculatedStartDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+            break;
+          default:
+            calculatedStartDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        }
+        calculatedEndDate = now;
+      }
+      
+      const statistics = await getNotificationStatistics({
+        startDate: calculatedStartDate?.toISOString(),
+        endDate: calculatedEndDate?.toISOString(),
+        eventId,
+        batchId
+      });
       
       return res.status(200).json(
         successResponse('Statistiques des notifications récupérées', {
           period,
-          totalSent: 0,
-          totalFailed: 0,
-          totalPending: 0,
-          byType: {
-            email: { sent: 0, failed: 0, pending: 0 },
-            sms: { sent: 0, failed: 0, pending: 0 }
-          },
-          byProvider: {
-            sendgrid: { sent: 0, failed: 0 },
-            twilio: { sent: 0, failed: 0 },
-            vonage: { sent: 0, failed: 0 }
-          }
+          overview: statistics.overview,
+          byType: statistics.byType,
+          byProvider: statistics.byProvider,
+          dailyStats: statistics.dailyStats,
+          topTemplates: statistics.topTemplates,
+          filters: statistics.filters
         })
       );
     } catch (error) {
@@ -801,7 +888,69 @@ class NotificationsController {
       });
 
       return res.status(500).json(
-        errorResponse('Échec de la récupération des statistiques', null, 'STATISTICS_FAILED')
+        errorResponse('Échec de la récupération des statistiques', null, 'STATS_FAILED')
+      );
+    }
+  }
+
+  /**
+   * Récupère l'historique des notifications
+   */
+  async getNotificationHistory(req, res) {
+    try {
+      const { 
+        page = 1, 
+        limit = 50, 
+        type, 
+        status, 
+        recipient, 
+        eventId, 
+        batchId,
+        startDate,
+        endDate,
+        orderBy = 'created_at',
+        orderDirection = 'DESC'
+      } = req.query;
+      
+      const { getNotificationHistory } = require('../../core/database/notification.repository');
+      
+      const offset = (parseInt(page) - 1) * parseInt(limit);
+      
+      const history = await getNotificationHistory({
+        limit: parseInt(limit),
+        offset,
+        type,
+        status,
+        recipient,
+        eventId,
+        batchId,
+        startDate,
+        endDate,
+        orderBy,
+        orderDirection
+      });
+      
+      return res.status(200).json(
+        successResponse('Historique des notifications récupéré', {
+          notifications: history.notifications,
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: history.pagination.total,
+            totalPages: Math.ceil(history.pagination.total / parseInt(limit)),
+            hasMore: history.pagination.hasMore
+          },
+          filters: history.filters
+        })
+      );
+    } catch (error) {
+      logger.error('Failed to get notification history', {
+        error: error.message,
+        query: req.query
+      });
+
+      return res.status(500).json(
+        errorResponse('Échec de la récupération de l\'historique', null, 'HISTORY_FAILED')
       );
     }
   }
