@@ -337,5 +337,9 @@ if (require.main === module) {
   notificationServer.start();
 }
 
-// Export pour les tests
+// Export de la classe pour utilisation directe
 module.exports = NotificationServer;
+
+// Export de l'app Express pour les tests
+const testServerInstance = new NotificationServer();
+module.exports.app = testServerInstance.app;
