@@ -322,7 +322,48 @@ async function sendCustomEmail(recipient, templateData) {
 }
 
 async function sendCustomSMS(recipient, templateData) {
-  console.log(`[NOTIFICATION_CONSUMER] SMS personnalisé pour ${recipient.phone}`);
+  try {
+    console.log(`[NOTIFICATION_CONSUMER] SMS personnalisé pour ${recipient.phone}`);
+    
+    // Créer le client Twilio
+    const client = twilio(smsConfig.accountSid, smsConfig.authToken);
+    
+    // Générer le message SMS
+    const message = `Event Planner: ${templateData.event_title} - ${templateData.event_date} à ${templateData.event_location}. Billet: ${templateData.ticket_code || 'Disponible'}`;
+    
+    // Envoyer le SMS
+    const result = await client.messages.create({
+      body: message,
+      from: smsConfig.fromNumber,
+      to: recipient.phone
+    });
+    
+    console.log(`[NOTIFICATION_CONSUMER] SMS envoyé à ${recipient.phone}, SID: ${result.sid}`);
+    
+    return {
+      success: true,
+      messageId: result.sid,
+      to: recipient.phone
+    };
+    
+  } catch (error) {
+    console.error(`[NOTIFICATION_CONSUMER] Erreur envoi SMS à ${recipient.phone}:`, error.message);
+    
+    // En mode développement, simuler l'envoi
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[NOTIFICATION_CONSUMER] MODE DEV: Simulation SMS pour ${recipient.phone}`);
+      console.log(`[NOTIFICATION_CONSUMER] Message: ${templateData.event_title} - ${templateData.event_date}`);
+      
+      return {
+        success: true,
+        messageId: `mock-${Date.now()}`,
+        to: recipient.phone,
+        mock: true
+      };
+    }
+    
+    throw error;
+  }
 }
 
 module.exports = {

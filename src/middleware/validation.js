@@ -112,6 +112,13 @@ const schemas = {
     type: Joi.string().valid('email', 'sms', 'all').default('all'),
     dateFrom: Joi.date().optional(),
     dateTo: Joi.date().optional()
+  }),
+
+  // Validation pour le nettoyage des queues
+  cleanQueues: Joi.object({
+    olderThan: Joi.number().integer().min(1).max(168).default(24), // en heures, max 1 semaine
+    status: Joi.string().valid('completed', 'failed', 'all').default('completed'),
+    limit: Joi.number().integer().min(1).max(10000).default(1000)
   })
 };
 
@@ -123,7 +130,7 @@ const schemas = {
  */
 function validate(schema, source = 'body') {
   return (req, res, next) => {
-    const data = req[source];
+    const data = req[source] || {};
     
     // Permettre les champs injectés par le contexte
     const { error, value } = schema.validate(data, {
@@ -152,11 +159,14 @@ function validate(schema, source = 'body') {
     }
 
     // Fusionner les données validées avec les données existantes
-    req[source] = { ...req[source], ...value };
+    req[source] = req[source] || {};
+    const safeValue = value || {};
+    
+    req[source] = { ...req[source], ...safeValue };
     
     logger.validation('Validation passed', {
       source,
-      fields: Object.keys(value),
+      fields: Object.keys(safeValue),
       ip: req.ip
     });
 

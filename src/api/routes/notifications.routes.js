@@ -129,4 +129,14 @@ router.get('/statistics',
   notificationsController.getNotificationStatistics
 );
 
+/**
+ * 🧹 NETTOYAGE DES FILES D'ATTENTE
+ * POST /api/notifications/queues/clean
+ * Nettoie les anciennes notifications terminées
+ */
+router.post('/queues/clean',
+  validateBody(schemas.cleanQueues),
+  notificationsController.cleanQueues
+);
+
 module.exports = router;
