@@ -1,0 +1,39 @@
+# Templates SMS pour Event Planner
+
+## welcome
+Bienvenue sur Event Planner ! 🎉
+Merci de vous inscrire, {{firstName}} !
+Accédez à votre tableau de bord : {{dashboardUrl}}
+Besoin d'aide ? Contactez-nous : {{supportUrl}}
+
+## event-confirmation
+🎫 Billet confirmé pour {{eventName}} !
+Code : {{ticketCode}}
+Participant : {{attendeeName}}
+Date : {{eventDate}}
+Lieu : {{eventLocation}}
+Présentez ce code à l'entrée.
+
+## otp
+🔐 Votre code OTP Event Planner : {{otpCode}}
+Valide dans les {{otpExpiresIn}} minutes.
+Ne partagez jamais ce code !
+
+## event-notification
+📢 {{eventName}}
+{{notificationMessage}}
+Date : {{eventDate}}
+Lieu : {{eventLocation}}
+Plus d'infos : {{eventUrl}}
+
+## password-reset
+🔐 Réinitialisation mot de passe
+Cliquez ici : {{resetUrl}}
+Valide 1h. Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.
+
+## ticket-reminder
+📅 Rappel : {{eventName}}
+Dans {{timeRemaining}}
+Date : {{eventDate}}
+Lieu : {{eventLocation}}
+N'oubliez pas !

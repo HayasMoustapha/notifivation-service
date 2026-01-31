@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmation de votre billet - {{eventName}}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .event-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .ticket-info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+        }
+        .qr-code {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: #fff;
+            border: 2px dashed #007bff;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎫 Confirmation de votre billet</h1>
+            <h2>{{eventName}}</h2>
+        </div>
+
+        <div class="event-info">
+            <h3>📅 Détails de l'événement</h3>
+            <p><strong>Événement :</strong> {{eventName}}</p>
+            <p><strong>Date :</strong> {{eventDate}}</p>
+            <p><strong>Lieu :</strong> {{eventLocation}}</p>
+        </div>
+
+        <div class="ticket-info">
+            <h3>🎟 Informations du billet</h3>
+            <p><strong>Code du billet :</strong> <code>{{ticketCode}}</code></p>
+            <p><strong>Nom du participant :</strong> {{attendeeName}}</p>
+            <p><strong>Email :</strong> {{attendeeEmail}}</p>
+            <p><strong>Type de billet :</strong> {{ticketType}}</p>
+        </div>
+
+        <div class="qr-code">
+            <h3>📱 Code QR</h3>
+            <p>Scannez ce code QR à l'entrée de l'événement</p>
+            <div style="background: #f0f0f0; padding: 20px; border-radius: 5px;">
+                [QR Code sera généré ici: {{ticketCode}}]
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Merci d'avoir choisi Event Planner !</p>
+            <p>Cet email est une confirmation automatique. Veuillez le conserver.</p>
+            <p>© 2024 Event Planner - Tous droits réservés</p>
+        </div>
+    </div>
+</body>
+</html>

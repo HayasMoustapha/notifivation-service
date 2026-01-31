@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📢 Notification : {{eventName}}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #17a2b8;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .notification-box {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .event-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📢 Notification</h1>
+            <h2>{{eventName}}</h2>
+        </div>
+
+        <div class="notification-box">
+            <h3>{{notificationTitle}}</h3>
+            <p>{{notificationMessage}}</p>
+        </div>
+
+        <div class="event-info">
+            <h3>📅 Informations</h3>
+            <p><strong>Événement :</strong> {{eventName}}</p>
+            <p><strong>Date :</strong> {{eventDate}}</p>
+            <p><strong>Lieu :</strong> {{eventLocation}}</p>
+        </div>
+
+        <div class="footer">
+            <p>Merci de votre attention !</p>
+            <p>© 2024 Event Planner - Tous droits réservés</p>
+            <p>Cet email a été envoyé à {{attendeeEmail}}</p>
+        </div>
+    </div>
+</body>
+</html>
