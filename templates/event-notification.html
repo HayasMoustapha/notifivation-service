@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification concernant {{eventName}}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #17a2b8;
+            padding-bottom: 20px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .notification-icon {
+            font-size: 48px;
+            color: #17a2b8;
+            margin-bottom: 20px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .notification-title {
+            font-size: 24px;
+            color: #17a2b8;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .event-info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .message-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #17a2b8;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+        .action-required {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎉 Event Planner</div>
+            <div class="notification-icon">📢</div>
+            <h1>Notification d'événement</h1>
+        </div>
+        
+        <div class="content">
+            <p class="notification-title">
+                {{notificationTitle}}
+            </p>
+            
+            <p>
+                Bonjour {{firstName}},
+            </p>
+            
+            <div class="event-info">
+                <h3>📅 Informations sur l'événement</h3>
+                <p>
+                    <strong>Nom de l'événement :</strong> {{eventName}}<br>
+                    <strong>Date :</strong> {{eventDate}}<br>
+                    <strong>Lieu :</strong> {{eventLocation}}<br>
+                    <strong>Organisateur :</strong> {{organizerName}}
+                </p>
+            </div>
+            
+            <div class="message-box">
+                <h3>💬 Message</h3>
+                <p>{{message}}</p>
+            </div>
+            
+            {{#if actionRequired}}
+            <div class="action-required">
+                <h3>⚠️ Action requise</h3>
+                <p>{{actionRequired}}</p>
+            </div>
+            {{/if}}
+            
+            <div style="text-align: center;">
+                {{#if eventUrl}}
+                <a href="{{eventUrl}}" class="cta-button">📋 Voir les détails</a>
+                {{/if}}
+                {{#if responseUrl}}
+                <a href="{{responseUrl}}" class="cta-button">✅ Répondre</a>
+                {{/if}}
+                <a href="{{frontendUrl}}/dashboard" class="cta-button">🏠 Tableau de bord</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>
+                Cette notification vous concerne concernant l'événement "{{eventName}}".<br>
+                Si vous avez des questions, n'hésitez pas à nous contacter.
+            </p>
+            
+            <p style="margin-top: 20px; font-size: 12px;">
+                © 2024 Event Planner. Tous droits réservés.<br>
+                Vous recevez cet email car vous êtes concerné par l'événement "{{eventName}}".
+            </p>
+        </div>
+    </div>
+</body>
+</html>
