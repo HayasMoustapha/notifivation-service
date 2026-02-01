@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rappel : {{eventName}} demain !</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ffc107;
+            padding-bottom: 20px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .reminder-icon {
+            font-size: 48px;
+            color: #ffc107;
+            margin-bottom: 20px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .reminder-title {
+            font-size: 24px;
+            color: #ffc107;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .event-info {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .countdown {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .countdown-number {
+            font-size: 36px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .checklist {
+            background-color: #f8f9fa;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+        .weather-info {
+            background-color: #e2e3e5;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .directions-info {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎉 Event Planner</div>
+            <div class="reminder-icon">⏰</div>
+            <h1>Rappel d'événement</h1>
+        </div>
+        
+        <div class="content">
+            <p class="reminder-title">
+                {{eventName}} a lieu demain !
+            </p>
+            
+            <p>
+                Bonjour {{firstName}},<br><br>
+                
+                C'est bientôt le grand jour ! Nous vous rappelons que l'événement auquel vous êtes inscrit se déroule demain.
+            </p>
+            
+            <div class="countdown">
+                <div class="countdown-number">1</div>
+                <p>jour avant l'événement</p>
+            </div>
+            
+            <div class="event-info">
+                <h3>📅 Détails de l'événement</h3>
+                <p>
+                    <strong>Nom de l'événement :</strong> {{eventName}}<br>
+                    <strong>Date :</strong> {{eventDate}}<br>
+                    <strong>Heure :</strong> {{eventTime}}<br>
+                    <strong>Lieu :</strong> {{eventLocation}}<br>
+                    <strong>Organisateur :</strong> {{organizerName}}
+                </p>
+            </div>
+            
+            <div class="checklist">
+                <h3>✅ Checklist pour demain</h3>
+                <ul>
+                    <li>Vérifiez l'heure et le lieu de l'événement</li>
+                    <li>Préparez vos tickets (imprimés ou sur mobile)</li>
+                    <li>Prévoyez d'arriver 15 minutes en avance</li>
+                    <li>Vérifiez les conditions d'accès (stationnement, etc.)</li>
+                    <li>Prévoyez un moyen de paiement si nécessaire</li>
+                </ul>
+            </div>
+            
+            <div class="directions-info">
+                <h3>🗺️ Itinéraire</h3>
+                <p>
+                    Planifiez votre trajet pour arriver à l'heure.<br>
+                    N'hésitez pas à consulter les options de transport disponibles.
+                </p>
+                <div style="text-align: center;">
+                    <a href="https://maps.google.com/?q={{eventLocation}}" class="cta-button" target="_blank">📍 Voir sur Google Maps</a>
+                </div>
+            </div>
+            
+            <div class="weather-info">
+                <h3>🌤️ Météo</h3>
+                <p>
+                    Pensez à consulter la météo demain pour vous habiller convenablement.<br>
+                    N'oubliez pas un parapluie si nécessaire !
+                </p>
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="{{frontendUrl}}/my-tickets" class="cta-button">🎫 Voir mes tickets</a>
+                <a href="{{frontendUrl}}/events/{{eventId}}" class="cta-button">📋 Détails de l'événement</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>
+                Nous sommes impatients de vous voir à l'événement !<br>
+                Si vous avez des questions, n'hésitez pas à nous contacter.
+            </p>
+            
+            <p style="margin-top: 20px; font-size: 12px;">
+                © 2024 Event Planner. Tous droits réservés.<br>
+                Vous recevez cet email car vous êtes inscrit à l'événement "{{eventName}}".
+            </p>
+        </div>
+    </div>
+</body>
+</html>

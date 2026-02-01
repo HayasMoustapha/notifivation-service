@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Important : L'événement "{{eventName}}" a été annulé</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #dc3545;
+            padding-bottom: 20px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .alert-icon {
+            font-size: 48px;
+            color: #dc3545;
+            margin-bottom: 20px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .alert-title {
+            font-size: 24px;
+            color: #dc3545;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .alert-box {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .info-box {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+        .event-details {
+            background-color: #f8f9fa;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .contact-info {
+            background-color: #e2e3e5;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎉 Event Planner</div>
+            <div class="alert-icon">⚠️</div>
+            <h1>Annulation d'événement</h1>
+        </div>
+        
+        <div class="content">
+            <p class="alert-title">
+                L'événement "{{eventName}}" a été annulé
+            </p>
+            
+            <p>
+                Chère {{firstName}} {{lastName}},<br><br>
+                
+                Nous vous informons que l'événement auquel vous étiez inscrit a été annulé par l'organisateur.
+            </p>
+            
+            <div class="event-details">
+                <h3>Détails de l'événement :</h3>
+                <p>
+                    <strong>Nom de l'événement :</strong> {{eventName}}<br>
+                    <strong>Date prévue :</strong> {{eventDate}}<br>
+                    <strong>Raison de l'annulation :</strong> {{cancellationReason}}
+                </p>
+            </div>
+            
+            <div class="info-box">
+                <strong>Informations sur le remboursement :</strong><br>
+                {{refundInfo}}
+            </div>
+            
+            <div class="alert-box">
+                <strong>Que faire maintenant ?</strong><br>
+                • Si vous avez déjà payé pour des tickets, veuillez consulter les informations de remboursement ci-dessus<br>
+                • Contactez l'organisateur pour toute question supplémentaire<br>
+                • Consultez notre plateforme pour d'autres événements similaires
+            </div>
+            
+            <div class="contact-info">
+                <h3>Support Event Planner</h3>
+                <p>
+                    Si vous avez besoin d'aide ou si vous avez des questions concernant cette annulation,<br>
+                    n'hésitez pas à nous contacter :
+                </p>
+                <p>
+                    📧 Email : support@eventplanner.com<br>
+                    📞 Téléphone : +33 1 23 45 67 89<br>
+                    💬 Chat : Disponible sur notre site web
+                </p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>
+                Nous sommes désolés pour ce contretemps et espérons vous voir bientôt<br>
+                à un de nos autres événements.
+            </p>
+            
+            <p style="margin-top: 20px; font-size: 12px;">
+                © 2024 Event Planner. Tous droits réservés.<br>
+                Vous recevez cet email car vous étiez inscrit à l'événement "{{eventName}}".
+            </p>
+        </div>
+    </div>
+</body>
+</html>

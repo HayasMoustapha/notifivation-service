@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vos tickets pour {{eventName}}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 20px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .ticket-icon {
+            font-size: 48px;
+            color: #007bff;
+            margin-bottom: 20px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .success-title {
+            font-size: 24px;
+            color: #007bff;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .ticket-info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .event-details {
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+        .qr-info {
+            background-color: #e2e3e5;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .ticket-list {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .ticket-item {
+            padding: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .ticket-item:last-child {
+            border-bottom: none;
+        }
+        .important-note {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎉 Event Planner</div>
+            <div class="ticket-icon">🎫</div>
+            <h1>Vos tickets sont prêts !</h1>
+        </div>
+        
+        <div class="content">
+            <p class="success-title">
+                Super ! Vos tickets pour {{eventName}} ont été générés
+            </p>
+            
+            <p>
+                Félicitations ! Vos tickets sont maintenant disponibles. Vous pouvez les télécharger et les imprimer pour l'événement.
+            </p>
+            
+            <div class="ticket-info">
+                <h3>Récapitulatif de vos tickets</h3>
+                <p>
+                    <strong>Événement :</strong> {{eventName}}<br>
+                    <strong>Date de l'événement :</strong> {{eventDate}}<br>
+                    <strong>Lieu :</strong> {{eventLocation}}<br>
+                    <strong>Nombre de tickets :</strong> {{ticketCount}}
+                </p>
+            </div>
+            
+            {{#if ticketIds}}
+            <div class="ticket-list">
+                <h3>Vos numéros de tickets</h3>
+                {{#each ticketIds}}
+                <div class="ticket-item">
+                    <strong>Ticket #{{@index}} :</strong> {{this}}
+                </div>
+                {{/each}}
+            </div>
+            {{/if}}
+            
+            <div class="event-details">
+                <h3>Informations importantes</h3>
+                <ul>
+                    <li>Présentez-vous à l'événement 15 minutes en avance</li>
+                    <li>Ayez vos tickets (imprimés ou sur mobile) prêts à être scannés</li>
+                    <li>Chaque ticket ne peut être utilisé qu'une seule fois</li>
+                    <li>Conservez vos emails de confirmation comme preuve d'achat</li>
+                </ul>
+            </div>
+            
+            <div class="qr-info">
+                <h3>📱 Accès rapide</h3>
+                <p>
+                    Vos tickets incluent des QR codes pour une validation rapide<br>
+                    sur place. Il vous suffit de présenter votre téléphone !
+                </p>
+            </div>
+            
+            <div class="important-note">
+                <strong>⚠️ Important :</strong><br>
+                Ne partagez jamais vos tickets avec d'autres personnes. Chaque ticket est personnel et ne peut être transféré sans autorisation.
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="{{downloadUrl}}" class="cta-button">📥 Télécharger mes tickets</a>
+                {{#if qrCode}}
+                <a href="{{qrCode}}" class="cta-button">📱 Voir le QR code</a>
+                {{/if}}
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>
+                Nous espérons que vous passerez un excellent moment à l'événement !<br>
+                N'hésitez pas à nous contacter si vous avez des questions.
+            </p>
+            
+            <p style="margin-top: 20px; font-size: 12px;">
+                © 2024 Event Planner. Tous droits réservés.<br>
+                Vous recevez cet email car vous avez acheté des tickets pour "{{eventName}}".
+            </p>
+        </div>
+    </div>
+</body>
+</html>

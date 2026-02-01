@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Votre compte Event Planner a été activé !</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #28a745;
+            padding-bottom: 20px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .success-icon {
+            font-size: 48px;
+            color: #28a745;
+            margin-bottom: 20px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .success-title {
+            font-size: 24px;
+            color: #28a745;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .info-box {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #28a745;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+        .next-steps {
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .next-steps h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎉 Event Planner</div>
+            <div class="success-icon">✅</div>
+            <h1>Votre compte a été activé !</h1>
+        </div>
+        
+        <div class="content">
+            <p class="success-title">
+                Félicitations {{firstName}} {{lastName}} !
+            </p>
+            
+            <p>
+                Votre compte Event Planner est maintenant activé et prêt à l'emploi. Vous pouvez accéder à toutes les fonctionnalités de notre plateforme.
+            </p>
+            
+            <div class="info-box">
+                <strong>Informations du compte :</strong><br>
+                Nom d'utilisateur : <strong>{{username}}</strong><br>
+                Email : <strong>{{email}}</strong><br>
+                Date d'activation : <strong>{{activationDate}}</strong>
+            </div>
+            
+            <div class="next-steps">
+                <h3>Prochaines étapes :</h3>
+                <ol>
+                    <li>Connectez-vous à votre tableau de bord</li>
+                    <li>Créez votre premier événement</li>
+                    <li>Configurez vos types de tickets</li>
+                    <li>Lancez la vente de tickets</li>
+                </ol>
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="{{frontendUrl}}/dashboard" class="cta-button">Accéder à votre tableau de bord</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>
+                L'équipe Event Planner est ravie de vous compter parmi nos utilisateurs !<br>
+                N'hésitez pas à nous contacter si vous avez besoin d'aide.
+            </p>
+            
+            <p style="margin-top: 20px; font-size: 12px;">
+                © 2024 Event Planner. Tous droits réservés.<br>
+                Vous recevez cet email suite à l'activation de votre compte Event Planner.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
