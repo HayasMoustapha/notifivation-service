@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚨 Alerte de Fraude Détectée</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #dc3545;
+            padding-bottom: 20px;
+        }
+        .fraud-alert {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .incident-details {
+            background-color: #f8f9fa;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .action-required {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #dc3545;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        .safe-button {
+            background-color: #28a745;
+        }
+        .risk-high {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .risk-medium {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .risk-low {
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚨 Alerte de Fraude</h1>
+        </div>
+        
+        <p>Bonjour {{firstName}},</p>
+        
+        <p>Notre système de détection de fraude a identifié une activité suspecte nécessitant votre attention immédiate.</p>
+        
+        <div class="fraud-alert">
+            <h3>🚨 Détails de l'Alerte</h3>
+            <p>
+                <strong>Type de fraude :</strong> {{fraudType}}<br>
+                <strong>Niveau de risque :</strong> 
+                <span class="risk-{{riskLevel}}">{{riskLevel}}</span><br>
+                <strong>Date et heure :</strong> {{detectionTime}}<br>
+                <strong>ID de l'incident :</strong> {{incidentId}}<br>
+                <strong>Statut :</strong> {{status}}
+            </p>
+        </div>
+        
+        <div class="incident-details">
+            <h3>🔍 Description de l'Incident</h3>
+            <p>{{description}}</p>
+            
+            {{#if affectedTickets}}
+            <h4>Tickets Concernés :</h4>
+            <ul>
+                {{#each affectedTickets}}
+                <li>Ticket {{ticketId}} - {{eventName}} ({{status}})</li>
+                {{/each}}
+            </ul>
+            {{/if}}
+            
+            {{#if suspiciousActivity}}
+            <h4>Activité Suspecte :</h4>
+            <ul>
+                {{#each suspiciousActivity}}
+                <li>{{this}}</li>
+                {{/each}}
+            </ul>
+            {{/if}}
+        </div>
+        
+        <div class="action-required">
+            <h3>⚠️ Actions Requises</h3>
+            <p class="risk-{{riskLevel}}">
+                {{#if (eq riskLevel 'high')}}
+                URGENCE CRITIQUE - Action immédiate obligatoire
+                {{else if (eq riskLevel 'medium')}}
+                URGENCE MOYENNE - Vérification requise
+                {{else}}
+                INFORMATION - Surveillance recommandée
+                {{/if}}
+            </p>
+            
+            <ul>
+                {{#if requiresPasswordChange}}
+                <li>🔒 Changez immédiatement votre mot de passe</li>
+                {{/if}}
+                {{#if requiresAccountReview}}
+                <li>🔍 Passez en revue les activités récentes de votre compte</li>
+                {{/if}}
+                {{#if requiresContactSupport}}
+                <li>📞 Contactez notre support sécurité immédiatement</li>
+                {{/if}}
+                {{#if requiresTicketValidation}}
+                <li>🎫 Validez l'authenticité de vos tickets concernés</li>
+                {{/if}}
+            </ul>
+            
+            <div style="text-align: center;">
+                {{#if requiresPasswordChange}}
+                <a href="{{frontendUrl}}/security/change-password" class="cta-button">🔒 Changer le Mot de Passe</a>
+                {{/if}}
+                {{#if requiresAccountReview}}
+                <a href="{{frontendUrl}}/security/activity-log" class="cta-button">🔍 Voir l'Activité</a>
+                {{/if}}
+                {{#if requiresContactSupport}}
+                <a href="{{frontendUrl}}/support/fraud" class="cta-button">📞 Contacter le Support</a>
+                {{/if}}
+                <a href="{{frontendUrl}}/security/dashboard" class="cta-button safe-button">🛡️ Tableau de Bord Sécurité</a>
+            </div>
+        </div>
+        
+        <p style="margin-top: 30px;">
+            La sécurité de votre compte est notre priorité absolue.<br>
+            Merci de votre coopération dans la résolution de cet incident.
+        </p>
+        
+        <p style="margin-top: 20px;">
+            <strong>Contact Sécurité :</strong> fraud@eventplanner.com<br>
+            <strong>Téléphone d'urgence :</strong> +33 1 234 567 999
+        </p>
+    </div>
+</body>
+</html>

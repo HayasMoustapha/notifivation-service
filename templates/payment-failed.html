@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Problème lors du traitement de votre paiement</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #dc3545;
+            padding-bottom: 20px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .error-icon {
+            font-size: 48px;
+            color: #dc3545;
+            margin-bottom: 20px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .error-title {
+            font-size: 24px;
+            color: #dc3545;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .error-info {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .transaction-details {
+            background-color: #f8f9fa;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #dc3545;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        .retry-button {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+        .help-section {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .error-code {
+            background-color: #e2e3e5;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">💳 Event Planner</div>
+            <div class="error-icon">❌</div>
+            <h1>Échec de Paiement</h1>
+        </div>
+        
+        <div class="content">
+            <p class="error-title">
+                Bonjour {{firstName}}, votre paiement n'a pas pu être traité
+            </p>
+            
+            <p>
+                Nous n'avons pas pu finaliser votre paiement pour l'événement "{{eventName}}".
+                Veuillez vérifier les informations ci-dessous et réessayer.
+            </p>
+            
+            <div class="error-info">
+                <h3>❌ Détails de l'Erreur</h3>
+                <p>
+                    <strong>Code d'erreur :</strong> {{errorCode}}<br>
+                    <strong>Message d'erreur :</strong> {{errorMessage}}<br>
+                    <strong>Date de la tentative :</strong> {{failedDate}}<br>
+                    <strong>Statut :</strong> Échec
+                </p>
+                
+                {{#if errorDetails}}
+                <div class="error-code">
+                    <strong>Détails techniques :</strong><br>
+                    {{errorDetails}}
+                </div>
+                {{/if}}
+            </div>
+            
+            <div class="transaction-details">
+                <h3>📋 Informations sur la Transaction</h3>
+                <p>
+                    <strong>Événement :</strong> {{eventName}}<br>
+                    {{#if ticketCount}}
+                    <strong>Nombre de tickets :</strong> {{ticketCount}}<br>
+                    {{/if}}
+                    <strong>Montant tenté :</strong> {{amount}} {{currency}}<br>
+                    {{#if paymentMethod}}
+                    <strong>Méthode de paiement :</strong> {{paymentMethod}}<br>
+                    {{/if}}
+                    {{#if transactionId}}
+                    <strong>ID de transaction :</strong> {{transactionId}}<br>
+                    {{/if}}
+                </p>
+            </div>
+            
+            <div class="help-section">
+                <h3>🔍 Causes Possibles et Solutions</h3>
+                <ul>
+                    {{#if (eq errorCode 'insufficient_funds')}}
+                    <li><strong>Fonds insuffisants :</strong> Vérifiez le solde de votre compte</li>
+                    {{else if (eq errorCode 'card_declined')}}
+                    <li><strong>Carte refusée :</strong> Contactez votre banque ou utilisez une autre carte</li>
+                    {{else if (eq errorCode 'expired_card')}}
+                    <li><strong>Carte expirée :</strong> Utilisez une carte valide</li>
+                    {{else if (eq errorCode 'invalid_cvc')}}
+                    <li><strong>CVC invalide :</strong> Vérifiez le code de sécurité de votre carte</li>
+                    {{else}}
+                    <li><strong>Erreur technique :</strong> Veuillez réessayer dans quelques instants</li>
+                    <li><strong>Connexion instable :</strong> Vérifiez votre connexion internet</li>
+                    <li><strong>Limite dépassée :</strong> Contactez votre banque pour vérifier les limites</li>
+                    {{/if}}
+                </ul>
+            </div>
+            
+            <div style="text-align: center;">
+                {{#if retryUrl}}
+                <a href="{{retryUrl}}" class="cta-button retry-button">🔄 Réessayer le Paiement</a>
+                {{/if}}
+                <a href="{{frontendUrl}}/events/{{eventId}}" class="cta-button">📋 Retour à l'Événement</a>
+                <a href="{{frontendUrl}}/payment-methods" class="cta-button" style="background-color: #6c757d;">💳 Changer de Méthode</a>
+            </div>
+            
+            {{#if canRetry}}
+            <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0;">
+                <h3>⏰ Tentatives Restantes</h3>
+                <p>Il vous reste {{remainingAttempts}} tentative(s) pour effectuer ce paiement.</p>
+                <p>Après cette limite, votre réservation sera automatiquement annulée.</p>
+            </div>
+            {{/if}}
+        </div>
+        
+        <div class="footer">
+            <p>
+                Si le problème persiste, n'hésitez pas à contacter notre support technique.<br>
+                Nous sommes là pour vous aider à finaliser votre réservation.
+            </p>
+            
+            <p style="margin-top: 20px;">
+                <strong>Support Technique :</strong> support@eventplanner.com<br>
+                <strong>Téléphone :</strong> +33 1 234 567 890<br>
+                <strong>Horaires :</strong> Lun-Ven 9h-18h
+            </p>
+            
+            <p style="margin-top: 20px; font-size: 12px;">
+                © 2024 Event Planner. Tous droits réservés.<br>
+                Cet email informe d'un échec de traitement de paiement.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

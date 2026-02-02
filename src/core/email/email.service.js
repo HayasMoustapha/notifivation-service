@@ -89,7 +89,7 @@ class EmailService {
    */
   async loadTemplates() {
     try {
-      const templatesDir = path.join(__dirname, '../templates/email');
+      const templatesDir = path.join(__dirname, '../../../templates');
       
       // Vérifier si le répertoire existe
       try {
@@ -102,10 +102,11 @@ class EmailService {
       const files = await fs.readdir(templatesDir);
       
       for (const file of files) {
-        if (file.endsWith('.hbs')) {
-          const templateName = path.basename(file, '.hbs');
+        if (file.endsWith('.html')) {
+          const templateName = path.basename(file, '.html');
           const templateContent = await fs.readFile(path.join(templatesDir, file), 'utf8');
           this.templates.set(templateName, handlebars.compile(templateContent));
+          logger.info(`Loaded template: ${templateName}`);
         }
       }
 
@@ -270,10 +271,23 @@ class EmailService {
       // Utiliser le template Handlebars si disponible
       const templateFn = this.templates.get(template);
       if (templateFn) {
-        html = templateFn({ ...data, ...options });
-        text = this.htmlToText(html);
-        subject = data.subject || this.getDefaultSubject(template);
+        try {
+          // Essayer de compiler avec les données
+          const compiledData = { ...data, ...options };
+          console.log(`[DEBUG] Compiling template ${template} with data:`, Object.keys(compiledData));
+          html = templateFn(compiledData);
+          console.log(`[DEBUG] Template ${template} compiled successfully, HTML length:`, html.length);
+          text = this.htmlToText(html);
+          subject = data.subject || this.getDefaultSubject(template);
+        } catch (templateError) {
+          console.error(`[DEBUG] Template compilation failed for ${template}:`, templateError.message);
+          // Utiliser un template de fallback en cas d'erreur
+          html = this.generateFallbackHTML(template, data, options);
+          text = this.htmlToText(html);
+          subject = data.subject || `Notification Event Planner - ${template}`;
+        }
       } else {
+        console.log(`[DEBUG] Template ${template} not found, using default template`);
         // Templates inline par défaut
         const defaultTemplate = this.getDefaultTemplate(template);
         const compiledTemplate = handlebars.compile(defaultTemplate.html);
@@ -282,8 +296,9 @@ class EmailService {
         subject = data.subject || defaultTemplate.subject;
       }
 
-      return { html, text };
+      return { html, text, subject };
     } catch (error) {
+      console.error(`[DEBUG] generateEmailContent failed for ${template}:`, error.message);
       logger.error('Failed to generate email content', {
         template,
         error: error.message,
@@ -299,6 +314,58 @@ class EmailService {
         }
       };
     }
+  }
+
+  /**
+   * Génère un HTML de fallback simple en cas d'erreur de template
+   */
+  generateFallbackHTML(template, data, options = {}) {
+    const firstName = data.firstName || 'Utilisateur';
+    const subject = data.subject || `Notification Event Planner - ${template}`;
+    
+    return `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${subject}</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4; }
+        .container { background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #007bff; padding-bottom: 20px; }
+        .content { margin-bottom: 30px; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Event Planner</h1>
+            <h2>${subject}</h2>
+        </div>
+        
+        <div class="content">
+            <p>Bonjour ${firstName},</p>
+            <p>Ceci est une notification concernant votre compte Event Planner.</p>
+            <p>Type de notification: <strong>${template}</strong></p>
+            
+            ${data.description ? `<p>Description: ${data.description}</p>` : ''}
+            ${data.amount ? `<p>Montant: ${data.amount} ${data.currency || 'EUR'}</p>` : ''}
+            ${data.eventName ? `<p>Événement: ${data.eventName}</p>` : ''}
+            ${data.transactionId ? `<p>Transaction: ${data.transactionId}</p>` : ''}
+            ${data.ticketCount ? `<p>Tickets: ${data.ticketCount}</p>` : ''}
+            
+            <p>Pour plus d'informations, connectez-vous à votre compte Event Planner.</p>
+        </div>
+        
+        <div class="footer">
+            <p>Merci de votre confiance dans Event Planner.</p>
+            <p>© 2024 Event Planner. Tous droits réservés.</p>
+        </div>
+    </div>
+</body>
+</html>`;
   }
 
   /**

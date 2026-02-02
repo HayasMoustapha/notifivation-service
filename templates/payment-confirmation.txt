@@ -1,0 +1,14 @@
+✅ PAIEMENT CONFIRMÉ ✅
+
+Bonjour {{firstName}},
+
+Votre paiement de {{amount}} {{currency}} a été accepté !
+
+💳 Transaction: {{transactionId}}
+🎫 Événement: {{eventName}}
+🎟️ Tickets: {{ticketCount}}
+
+Facture disponible: {{invoiceUrl}}
+
+Merci et à bientôt !
+Event Planner

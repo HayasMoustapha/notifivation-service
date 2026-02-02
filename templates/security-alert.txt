@@ -1,0 +1,17 @@
+🚨 ALERTE SÉCURITÉ 🚨
+
+{{firstName}}}, activité suspecte détectée !
+
+Type: {{alertType}}
+Description: {{description}}
+Heure: {{timestamp}}
+{{#if ipAddress}}
+IP: {{ipAddress}}
+{{/if}}
+
+Action requise: {{actionRequired}}
+
+Sécurisez votre compte: {{securityUrl}}
+
+Si ce n'est pas vous, contactez-nous immédiatement.
+Event Planner Sécurité

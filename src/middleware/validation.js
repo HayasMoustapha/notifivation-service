@@ -16,8 +16,28 @@ const schemas = {
       'string.email': 'L\'email du destinataire doit être valide',
       'any.required': 'L\'email du destinataire est requis'
     }),
-    template: Joi.string().valid('welcome', 'password-reset', 'event-confirmation', 'event-notification', 'ticket-reminder').required().messages({
-      'any.only': 'Le template doit être l\'un des suivants: welcome, password-reset, event-confirmation, event-notification, ticket-reminder',
+    template: Joi.string().valid(
+      'welcome', 
+      'account-activated', 
+      'password-reset', 
+      'event-confirmation', 
+      'event-notification', 
+      'event-cancelled', 
+      'payment-confirmation', 
+      'payment-failed',
+      'ticket-generated', 
+      'ticket-reminder',
+      'security-alert',
+      'event-invitation',
+      'refund-processed',
+      'fraud-detected',
+      'daily-scan-report',
+      'test-simple',
+      'refund-processed-simple',
+      'payment-failed-simple',
+      'fraud-detected-simple'
+    ).required().messages({
+      'any.only': 'Le template doit être l\'un des suivants: welcome, account-activated, password-reset, event-confirmation, event-notification, event-cancelled, payment-confirmation, payment-failed, ticket-generated, ticket-reminder, security-alert, event-invitation, refund-processed, fraud-detected, daily-scan-report, test-simple, refund-processed-simple, payment-failed-simple, fraud-detected-simple',
       'any.required': 'Le template est requis'
     }),
     data: Joi.object().required().messages({
@@ -39,8 +59,8 @@ const schemas = {
       'string.pattern.base': 'Le numéro de téléphone doit être valide',
       'any.required': 'Le numéro de téléphone est requis'
     }),
-    template: Joi.string().valid('welcome', 'password-reset', 'event-confirmation', 'otp', 'event-notification').required().messages({
-      'any.only': 'Le template doit être l\'un des suivants: welcome, password-reset, event-confirmation, otp, event-notification',
+    template: Joi.string().valid('otp', 'appointment-reminder', 'payment-confirmation', 'security-alert').required().messages({
+      'any.only': 'Le template doit être l\'un des suivants: otp, appointment-reminder, payment-confirmation, security-alert',
       'any.required': 'Le template est requis'
     }),
     data: Joi.object().required().messages({
@@ -52,7 +72,23 @@ const schemas = {
   sendBulkEmail: Joi.object({
     emails: Joi.array().items(Joi.object({
       to: Joi.string().email().required(),
-      template: Joi.string().valid('welcome', 'password-reset', 'event-confirmation', 'event-notification', 'ticket-reminder').required(),
+      template: Joi.string().valid(
+        'welcome', 
+        'account-activated', 
+        'password-reset', 
+        'event-confirmation', 
+        'event-notification', 
+        'event-cancelled', 
+        'payment-confirmation', 
+        'payment-failed',
+        'ticket-generated', 
+        'ticket-reminder',
+        'security-alert',
+        'event-invitation',
+        'refund-processed',
+        'fraud-detected',
+        'daily-scan-report'
+      ).required(),
       data: Joi.object().required()
     })).min(1).max(100).required().messages({
       'array.min': 'Au moins un email est requis',
@@ -64,7 +100,7 @@ const schemas = {
   sendBulkSMS: Joi.object({
     sms: Joi.array().items(Joi.object({
       to: Joi.string().pattern(/^[+]?[\d\s-()]+$/).required(),
-      template: Joi.string().valid('welcome', 'password-reset', 'event-confirmation', 'otp', 'event-notification').required(),
+      template: Joi.string().valid('otp', 'appointment-reminder', 'payment-confirmation', 'security-alert').required(),
       data: Joi.object().required()
     })).min(1).max(100).required().messages({
       'array.min': 'Au moins un SMS est requis',
@@ -76,12 +112,28 @@ const schemas = {
   sendBulkMixed: Joi.object({
     emails: Joi.array().items(Joi.object({
       to: Joi.string().email().required(),
-      template: Joi.string().valid('welcome', 'password-reset', 'event-confirmation', 'event-notification', 'ticket-reminder').required(),
+      template: Joi.string().valid(
+        'welcome', 
+        'account-activated', 
+        'password-reset', 
+        'event-confirmation', 
+        'event-notification', 
+        'event-cancelled', 
+        'payment-confirmation', 
+        'payment-failed',
+        'ticket-generated', 
+        'ticket-reminder',
+        'security-alert',
+        'event-invitation',
+        'refund-processed',
+        'fraud-detected',
+        'daily-scan-report'
+      ).required(),
       data: Joi.object().required()
     })).optional(),
     sms: Joi.array().items(Joi.object({
       to: Joi.string().pattern(/^[+]?[\d\s-()]+$/).required(),
-      template: Joi.string().valid('welcome', 'password-reset', 'event-confirmation', 'otp', 'event-notification').required(),
+      template: Joi.string().valid('otp', 'appointment-reminder', 'payment-confirmation', 'security-alert').required(),
       data: Joi.object().required()
     })).optional()
   }).or('emails', 'sms').messages({

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 Alerte de sécurité - Event Planner</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #dc3545;
+            padding-bottom: 20px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .alert-icon {
+            font-size: 48px;
+            color: #dc3545;
+            margin-bottom: 20px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .alert-title {
+            font-size: 24px;
+            color: #dc3545;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .alert-box {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .details-box {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .action-required {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #dc3545;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        .safe-button {
+            background-color: #28a745;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+        .urgency-high {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .urgency-medium {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .urgency-low {
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🔐 Event Planner</div>
+            <div class="alert-icon">🚨</div>
+            <h1>Alerte de Sécurité</h1>
+        </div>
+        
+        <div class="content">
+            <p class="alert-title">
+                {{#if (eq alertType 'suspicious_login')}}
+                Connexion Suspecte Détectée
+                {{else if (eq alertType 'password_changed')}}
+                Changement de Mot de Passe
+                {{else if (eq alertType 'account_locked')}}
+                Compte Temporairement Bloqué
+                {{else if (eq alertType 'new_device')}}
+                Nouvel Appareil Détecté
+                {{else}}
+                Activité de Sécurité Détectée
+                {{/if}}
+            </p>
+            
+            <p>
+                Bonjour {{firstName}},
+            </p>
+            
+            <div class="alert-box">
+                <h3>🔍 Détails de l'Alerte</h3>
+                <p>
+                    <strong>Type d'alerte :</strong> {{alertType}}<br>
+                    <strong>Description :</strong> {{description}}<br>
+                    <strong>Date et heure :</strong> {{timestamp}}<br>
+                    {{#if ipAddress}}
+                    <strong>Adresse IP :</strong> {{ipAddress}}<br>
+                    {{/if}}
+                    {{#if location}}
+                    <strong>Localisation :</strong> {{location}}<br>
+                    {{/if}}
+                </p>
+            </div>
+            
+            {{#if deviceInfo}}
+            <div class="details-box">
+                <h3>📱 Informations sur l'Appareil</h3>
+                <p>
+                    {{#if deviceInfo.browser}}
+                    <strong>Navigateur :</strong> {{deviceInfo.browser}}<br>
+                    {{/if}}
+                    {{#if deviceInfo.os}}
+                    <strong>Système d'exploitation :</strong> {{deviceInfo.os}}<br>
+                    {{/if}}
+                    {{#if deviceInfo.device}}
+                    <strong>Type d'appareil :</strong> {{deviceInfo.device}}<br>
+                    {{/if}}
+                </p>
+            </div>
+            {{/if}}
+            
+            {{#if actionRequired}}
+            <div class="action-required">
+                <h3>⚠️ Action Requise</h3>
+                <p>{{actionRequired}}</p>
+                
+                <div style="text-align: center;">
+                    {{#if (eq alertType 'suspicious_login')}}
+                    <a href="{{frontendUrl}}/security/review-login" class="cta-button">🔍 Vérifier la Connexion</a>
+                    <a href="{{frontendUrl}}/security/change-password" class="cta-button safe-button">🔒 Changer le Mot de Passe</a>
+                    {{else if (eq alertType 'password_changed')}}
+                    <a href="{{frontendUrl}}/security/confirm-change" class="cta-button safe-button">✅ Confirmer le Changement</a>
+                    <a href="{{frontendUrl}}/security/revert-change" class="cta-button">↩️ Annuler si Non Autorisé</a>
+                    {{else if (eq alertType 'account_locked')}}
+                    <a href="{{frontendUrl}}/security/unlock-account" class="cta-button safe-button">🔓 Débloquer mon Compte</a>
+                    {{else}}
+                    <a href="{{frontendUrl}}/security/dashboard" class="cta-button">🛡️ Tableau de Bord Sécurité</a>
+                    {{/if}}
+                </div>
+            </div>
+            {{/if}}
+            
+            <div class="details-box">
+                <h3>🛡️ Recommandations de Sécurité</h3>
+                <ul>
+                    <li>Ne partagez jamais vos identifiants avec des tiers</li>
+                    <li>Utilisez un mot de passe fort et unique</li>
+                    <li>Activez l'authentification à deux facteurs si disponible</li>
+                    <li>Vérifiez régulièrement vos activités de connexion</li>
+                    <li>Signalez toute activité suspecte immédiatement</li>
+                </ul>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <p class="urgency-high">
+                    {{#if (eq urgency 'high')}}
+                    🚨 URGENCE ÉLEVÉE - Action immédiate requise
+                    {{else if (eq urgency 'medium')}}
+                    ⚠️ URGENCE MOYENNE - Vérification recommandée
+                    {{else}}
+                    ℹ️ INFORMATION - Surveillance conseillée
+                    {{/if}}
+                </p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>
+                Si vous n'êtes pas à l'origine de cette activité,<br>
+                veuillez contacter notre équipe de sécurité immédiatement.
+            </p>
+            
+            <p style="margin-top: 20px;">
+                <strong>Contact Sécurité :</strong> security@eventplanner.com<br>
+                <strong>Support :</strong> support@eventplanner.com
+            </p>
+            
+            <p style="margin-top: 20px; font-size: 12px;">
+                © 2024 Event Planner. Tous droits réservés.<br>
+                Cet email a été envoyé suite à une détection d'activité de sécurité.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

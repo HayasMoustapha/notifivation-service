@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapport Quotidien de Validation - {{reportDate}}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #17a2b8;
+            padding-bottom: 20px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .report-icon {
+            font-size: 48px;
+            color: #17a2b8;
+            margin-bottom: 20px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .report-title {
+            font-size: 24px;
+            color: #17a2b8;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .summary-box {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #17a2b8;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+        .events-section {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .event-item {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+        }
+        .event-item:last-child {
+            border-bottom: none;
+        }
+        .alert-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .success-box {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #17a2b8;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+        .performance-good {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .performance-warning {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .performance-critical {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">📊 Event Planner</div>
+            <div class="report-icon">📈</div>
+            <h1>Rapport Quotidien de Validation</h1>
+        </div>
+        
+        <div class="content">
+            <p class="report-title">
+                Rapport du {{reportDate}}
+            </p>
+            
+            <p>
+                Bonjour {{firstName}}, voici le rapport quotidien des validations de tickets pour vos événements.
+            </p>
+            
+            <div class="summary-box">
+                <h3>📊 Résumé de la Journée</h3>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-number">{{totalScans}}</div>
+                        <div class="stat-label">Scans Totals</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">{{uniqueTickets}}</div>
+                        <div class="stat-label">Tickets Uniques</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">{{successfulScans}}</div>
+                        <div class="stat-label">Scans Réussis</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">{{failedScans}}</div>
+                        <div class="stat-label">Scans Échoués</div>
+                    </div>
+                </div>
+                
+                <p>
+                    <strong>Taux de succès :</strong> 
+                    {{#if (gt successRate 95)}}
+                    <span class="performance-good">{{successRate}}%</span>
+                    {{else if (gt successRate 80)}}
+                    <span class="performance-warning">{{successRate}}%</span>
+                    {{else}}
+                    <span class="performance-critical">{{successRate}}%</span>
+                    {{/if}}
+                </p>
+            </div>
+            
+            {{#if events}}
+            <div class="events-section">
+                <h3>🎫 Détails par Événement</h3>
+                {{#each events}}
+                <div class="event-item">
+                    <h4>{{eventName}}</h4>
+                    <p>
+                        <strong>Scans :</strong> {{scans}} / {{totalTickets}} tickets<br>
+                        <strong>Taux de validation :</strong> {{validationRate}}%<br>
+                        <strong>Heure de début :</strong> {{startTime}}<br>
+                        <strong>Heure de fin :</strong> {{endTime}}
+                    </p>
+                </div>
+                {{/each}}
+            </div>
+            {{/if}}
+            
+            {{#if alerts}}
+            <div class="alert-box">
+                <h3>⚠️ Alertes et Anomalies</h3>
+                {{#each alerts}}
+                <p>
+                    <strong>{{type}} :</strong> {{message}}<br>
+                    <small>{{timestamp}}</small>
+                </p>
+                {{/each}}
+            </div>
+            {{else}}
+            <div class="success-box">
+                <h3>✅ Aucune Anomalie Détectée</h3>
+                <p>Toutes les validations se sont déroulées normalement aujourd'hui.</p>
+            </div>
+            {{/if}}
+            
+            {{#if topPerformers}}
+            <div class="events-section">
+                <h3>🏆 Meilleures Performances</h3>
+                {{#each topPerformers}}
+                <p>
+                    <strong>{{eventName}}</strong> - {{scans}} scans ({{rate}}% de succès)
+                </p>
+                {{/each}}
+            </div>
+            {{/if}}
+            
+            {{#if issues}}
+            <div class="alert-box">
+                <h3>🔍 Points d'Attention</h3>
+                {{#each issues}}
+                <p>
+                    <strong>{{eventName}}</strong> - {{issue}}<br>
+                    <small>Recommandation : {{recommendation}}</small>
+                </p>
+                {{/each}}
+            </div>
+            {{/if}}
+            
+            <div style="text-align: center;">
+                <a href="{{frontendUrl}}/analytics/scanning" class="cta-button">📊 Voir les Analytics Détaillés</a>
+                <a href="{{frontendUrl}}/reports/export/{{reportId}}" class="cta-button">📥 Télécharger le Rapport CSV</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>
+                Ce rapport est généré automatiquement chaque jour à 23:59.<br>
+                Pour toute question sur ces statistiques, contactez notre support.
+            </p>
+            
+            <p style="margin-top: 20px;">
+                <strong>Support Technique :</strong> support@eventplanner.com<br>
+                <strong>Téléphone :</strong> +33 1 234 567 890
+            </p>
+            
+            <p style="margin-top: 20px; font-size: 12px;">
+                © 2024 Event Planner. Tous droits réservés.<br>
+                Rapport de validation généré le {{generatedAt}}.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

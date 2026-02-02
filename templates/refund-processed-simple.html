@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Votre remboursement a été traité</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #28a745;
+            padding-bottom: 20px;
+        }
+        .refund-info {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #28a745;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Remboursement Traité</h1>
+        </div>
+        
+        <p>Bonjour {{firstName}},</p>
+        
+        <p>Nous avons le plaisir de vous informer que votre demande de remboursement a été traitée avec succès.</p>
+        
+        <div class="refund-info">
+            <h3>💰 Détails du Remboursement</h3>
+            <p>
+                <strong>Montant remboursé :</strong> {{amount}} {{currency}}<br>
+                <strong>Référence de remboursement :</strong> {{refundId}}<br>
+                <strong>Transaction originale :</strong> {{originalTransactionId}}<br>
+                <strong>Date de traitement :</strong> {{processedDate}}<br>
+                <strong>Statut :</strong> {{status}}
+            </p>
+        </div>
+        
+        {{#if eventName}}
+        <div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0;">
+            <h3>📋 Informations sur la Transaction Originale</h3>
+            <p>
+                <strong>Événement :</strong> {{eventName}}<br>
+                {{#if ticketCount}}
+                <strong>Nombre de tickets :</strong> {{ticketCount}}<br>
+                {{/if}}
+                {{#if paymentMethod}}
+                <strong>Méthode de paiement :</strong> {{paymentMethod}}<br>
+                {{/if}}
+            </p>
+        </div>
+        {{/if}}
+        
+        <p>Merci de votre patience pendant le traitement de votre remboursement.</p>
+        
+        <div style="text-align: center;">
+            <a href="{{frontendUrl}}/my-refunds" class="cta-button">📊 Voir l'historique des Remboursements</a>
+        </div>
+    </div>
+</body>
+</html>

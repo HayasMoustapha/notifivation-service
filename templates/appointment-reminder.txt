@@ -1,0 +1,17 @@
+📅 RAPPEL RENDEZ-VOUS 📅
+
+{{firstName}}, n'oubliez pas votre rendez-vous !
+
+📋 {{appointmentType}}
+📅 {{appointmentDate}}
+⏰ {{appointmentTime}}
+📍 {{location}}
+
+{{#if notes}}
+📝 Notes: {{notes}}
+{{/if}}
+
+Pour confirmer ou annuler: {{confirmationUrl}}
+
+Merci de votre ponctualité !
+Event Planner

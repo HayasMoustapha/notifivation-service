@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Votre remboursement a été traité</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #28a745;
+            padding-bottom: 20px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .refund-icon {
+            font-size: 48px;
+            color: #28a745;
+            margin-bottom: 20px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .refund-title {
+            font-size: 24px;
+            color: #28a745;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .refund-info {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .transaction-details {
+            background-color: #f8f9fa;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #28a745;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+        .timeline {
+            background-color: #e2e3e5;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .status-processed {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .status-pending {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .status-failed {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">💰 Event Planner</div>
+            <div class="refund-icon">✅</div>
+            <h1>Remboursement Traité</h1>
+        </div>
+        
+        <div class="content">
+            <p class="refund-title">
+                Bonjour {{firstName}}, votre remboursement a été traité !
+            </p>
+            
+            <p>
+                Nous avons le plaisir de vous informer que votre demande de remboursement a été traitée avec succès.
+            </p>
+            
+            <div class="refund-info">
+                <h3>💰 Détails du Remboursement</h3>
+                <p>
+                    <strong>Montant remboursé :</strong> {{amount}} {{currency}}<br>
+                    <strong>Référence de remboursement :</strong> {{refundId}}<br>
+                    <strong>Transaction originale :</strong> {{originalTransactionId}}<br>
+                    <strong>Date de traitement :</strong> {{processedDate}}<br>
+                    <strong>Statut :</strong> <span class="status-processed">{{status}}</span>
+                </p>
+            </div>
+            
+            <div class="transaction-details">
+                <h3>📋 Informations sur la Transaction Originale</h3>
+                <p>
+                    {{#if eventName}}
+                    <strong>Événement :</strong> {{eventName}}<br>
+                    {{/if}}
+                    {{#if ticketCount}}
+                    <strong>Nombre de tickets :</strong> {{ticketCount}}<br>
+                    {{/if}}
+                    {{#if originalAmount}}
+                    <strong>Montant original :</strong> {{originalAmount}} {{currency}}<br>
+                    {{/if}}
+                    {{#if originalDate}}
+                    <strong>Date d'achat :</strong> {{originalDate}}<br>
+                    {{/if}}
+                    {{#if paymentMethod}}
+                    <strong>Méthode de paiement :</strong> {{paymentMethod}}<br>
+                    {{/if}}
+                </p>
+            </div>
+            
+            {{#if refundReason}}
+            <div class="timeline">
+                <h3>📝 Motif du Remboursement</h3>
+                <p>{{refundReason}}</p>
+            </div>
+            {{/if}}
+            
+            <div class="timeline">
+                <h3>⏱️ Délai de Réception</h3>
+                <p>
+                    {{#if (eq paymentMethod 'credit_card')}}
+                    Le remboursement apparaîtra sur votre compte bancaire dans 5-7 jours ouvrés.
+                    {{else if (eq paymentMethod 'paypal')}}
+                    Le remboursement est déjà visible sur votre compte PayPal.
+                    {{else if (eq paymentMethod 'bank_transfer')}}
+                    Le virement sera effectué dans 3-5 jours ouvrés.
+                    {{else}}
+                    Le délai de réception dépend de votre méthode de paiement originale.
+                    {{/if}}
+                </p>
+            </div>
+            
+            {{#if invoiceUrl}}
+            <div style="text-align: center;">
+                <a href="{{invoiceUrl}}" class="cta-button">📄 Télécharger la Facture de Remboursement</a>
+            </div>
+            {{/if}}
+            
+            <div style="text-align: center;">
+                <a href="{{frontendUrl}}/my-refunds" class="cta-button">📊 Voir l'historique des Remboursements</a>
+                <a href="{{frontendUrl}}/support" class="cta-button" style="background-color: #6c757d;">💬 Contacter le Support</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>
+                Merci de votre patience pendant le traitement de votre remboursement.<br>
+                Si vous ne recevez pas le remboursement dans les délais indiqués, 
+                veuillez nous contacter.
+            </p>
+            
+            <p style="margin-top: 20px;">
+                <strong>Support Client :</strong> support@eventplanner.com<br>
+                <strong>Téléphone :</strong> +33 1 234 567 890
+            </p>
+            
+            <p style="margin-top: 20px; font-size: 12px;">
+                © 2024 Event Planner. Tous droits réservés.<br>
+                Cet email confirme le traitement de votre demande de remboursement.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

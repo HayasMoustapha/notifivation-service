@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Problème lors du traitement de votre paiement</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #dc3545;
+            padding-bottom: 20px;
+        }
+        .error-info {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #dc3545;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        .retry-button {
+            background-color: #ffc107;
+            color: #212529;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>❌ Échec de Paiement</h1>
+        </div>
+        
+        <p>Bonjour {{firstName}},</p>
+        
+        <p>Nous n'avons pas pu finaliser votre paiement pour l'événement "{{eventName}}".</p>
+        
+        <div class="error-info">
+            <h3>❌ Détails de l'Erreur</h3>
+            <p>
+                <strong>Code d'erreur :</strong> {{errorCode}}<br>
+                <strong>Message d'erreur :</strong> {{errorMessage}}<br>
+                <strong>Date de la tentative :</strong> {{failedDate}}
+            </p>
+        </div>
+        
+        <div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0;">
+            <h3>📋 Informations sur la Transaction</h3>
+            <p>
+                <strong>Événement :</strong> {{eventName}}<br>
+                {{#if ticketCount}}
+                <strong>Nombre de tickets :</strong> {{ticketCount}}<br>
+                {{/if}}
+                <strong>Montant tenté :</strong> {{amount}} {{currency}}<br>
+                {{#if paymentMethod}}
+                <strong>Méthode de paiement :</strong> {{paymentMethod}}<br>
+                {{/if}}
+                {{#if transactionId}}
+                <strong>ID de transaction :</strong> {{transactionId}}<br>
+                {{/if}}
+            </p>
+        </div>
+        
+        <div style="text-align: center;">
+            {{#if retryUrl}}
+            <a href="{{retryUrl}}" class="cta-button retry-button">🔄 Réessayer le Paiement</a>
+            {{/if}}
+            <a href="{{frontendUrl}}/events/{{eventId}}" class="cta-button">📋 Retour à l'Événement</a>
+        </div>
+        
+        <p style="margin-top: 20px;">Si le problème persiste, n'hésitez pas à contacter notre support technique.</p>
+    </div>
+</body>
+</html>

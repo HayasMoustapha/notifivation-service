@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vous êtes invité à {{eventName}} !</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #6f42c1;
+            padding-bottom: 20px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .invitation-icon {
+            font-size: 48px;
+            color: #6f42c1;
+            margin-bottom: 20px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .invitation-title {
+            font-size: 24px;
+            color: #6f42c1;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .event-info {
+            background-color: #f8f9fa;
+            border-left: 4px solid #6f42c1;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .invitation-message {
+            background-color: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #6f42c1;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        .secondary-button {
+            background-color: #6c757d;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+        .organizer-info {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .rsvp-section {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎉 Event Planner</div>
+            <div class="invitation-icon">💌</div>
+            <h1>Vous êtes invité !</h1>
+        </div>
+        
+        <div class="content">
+            <p class="invitation-title">
+                {{firstName}}, vous êtes invité à {{eventName}} !
+            </p>
+            
+            <p>
+                {{#if senderName}}
+                {{senderName}} aimerait vous inviter à participer à cet événement spécial.
+                {{else}}
+                Vous avez été sélectionné pour participer à cet événement exclusif.
+                {{/if}}
+            </p>
+            
+            <div class="invitation-message">
+                <h3>📝 Message Personnel</h3>
+                <p>{{message}}</p>
+            </div>
+            
+            <div class="event-info">
+                <h3>📅 Détails de l'Événement</h3>
+                <p>
+                    <strong>Nom de l'événement :</strong> {{eventName}}<br>
+                    <strong>Date :</strong> {{eventDate}}<br>
+                    {{#if eventTime}}
+                    <strong>Heure :</strong> {{eventTime}}<br>
+                    {{/if}}
+                    <strong>Lieu :</strong> {{eventLocation}}<br>
+                    {{#if eventType}}
+                    <strong>Type d'événement :</strong> {{eventType}}<br>
+                    {{/if}}
+                    {{#if capacity}}
+                    <strong>Capacité :</strong> {{capacity}} participants<br>
+                    {{/if}}
+                </p>
+            </div>
+            
+            {{#if organizerName}}
+            <div class="organizer-info">
+                <h3>👤 Organisateur</h3>
+                <p>
+                    <strong>Nom :</strong> {{organizerName}}<br>
+                    {{#if organizerEmail}}
+                    <strong>Email :</strong> {{organizerEmail}}<br>
+                    {{/if}}
+                    {{#if organizerPhone}}
+                    <strong>Téléphone :</strong> {{organizerPhone}}<br>
+                    {{/if}}
+                </p>
+            </div>
+            {{/if}}
+            
+            <div class="rsvp-section">
+                <h3>✅ Votre réponse est attendue</h3>
+                <p>
+                    {{#if rsvpDeadline}}
+                    Merci de répondre avant le {{rsvpDeadline}}.
+                    {{else}}
+                    Votre réponse nous aidera à mieux organiser l'événement.
+                    {{/if}}
+                </p>
+                
+                <div style="text-align: center;">
+                    {{#if acceptUrl}}
+                    <a href="{{acceptUrl}}" class="cta-button">✅ Accepter l'Invitation</a>
+                    {{/if}}
+                    {{#if declineUrl}}
+                    <a href="{{declineUrl}}" class="cta-button secondary-button">❌ Décliner</a>
+                    {{/if}}
+                    {{#if maybeUrl}}
+                    <a href="{{maybeUrl}}" class="cta-button secondary-button">🤔 Peut-être</a>
+                    {{/if}}
+                </div>
+            </div>
+            
+            {{#if additionalInfo}}
+            <div class="event-info">
+                <h3>ℹ️ Informations Supplémentaires</h3>
+                <p>{{additionalInfo}}</p>
+            </div>
+            {{/if}}
+            
+            <div style="text-align: center;">
+                <a href="{{frontendUrl}}/events/{{eventId}}" class="cta-button">📋 Voir les Détails</a>
+                <a href="{{frontendUrl}}/calendar/add/{{eventId}}" class="cta-button">📅 Ajouter au Calendrier</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>
+                Nous espérons vous voir à l'événement !<br>
+                Pour toute question, n'hésitez pas à nous contacter.
+            </p>
+            
+            {{#if organizerName}}
+            <p style="margin-top: 20px;">
+                Cordialement,<br>
+                <strong>{{organizerName}}</strong><br>
+                Organisateur de l'événement
+            </p>
+            {{/if}}
+            
+            <p style="margin-top: 20px; font-size: 12px;">
+                © 2024 Event Planner. Tous droits réservés.<br>
+                Vous recevez cet email car vous avez été invité à "{{eventName}}".
+            </p>
+        </div>
+    </div>
+</body>
+</html>
