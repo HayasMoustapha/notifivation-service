@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Votre compte Event Planner a été suspendu</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #dc3545;
+            padding-bottom: 20px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .warning-icon {
+            font-size: 48px;
+            color: #dc3545;
+            margin-bottom: 20px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .warning-title {
+            font-size: 24px;
+            color: #dc3545;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .alert-box {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .info-box {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🚨 Event Planner</div>
+            <div class="warning-icon">⚠️</div>
+            <h1>Votre compte a été suspendu</h1>
+        </div>
+        
+        <div class="content">
+            <p class="warning-title">
+                {{firstName}} {{lastName}}, votre compte est temporairement suspendu
+            </p>
+            
+            <div class="alert-box">
+                <strong>Raison de la suspension :</strong><br>
+                {{suspensionReason}}
+            </div>
+            
+            <p>
+                Suite à un examen de votre compte, nous avons dû prendre la mesure de suspension temporaire pour les raisons suivantes :
+            </p>
+            
+            <ul>
+                <li>Date de suspension : <strong>{{suspensionDate}}</strong></li>
+                <li>Durée estimée : <strong>{{suspensionDuration}}</strong></li>
+                <li>Référence : <strong>{{suspensionId}}</strong></li>
+            </ul>
+            
+            <div class="info-box">
+                <h3>Que devez-vous faire ?</h3>
+                <p>
+                    Pour rétablir votre compte, veuillez :
+                </p>
+                <ol>
+                    <li>Prendre connaissance des raisons de la suspension</li>
+                    <li>Régulariser la situation identifiée</li>
+                    <li>Contacter notre support pour discuter de la réactivation</li>
+                </ol>
+                <p>
+                    <strong>Email support :</strong> {{supportEmail}}<br>
+                    <strong>Téléphone support :</strong> {{supportPhone}}
+                </p>
+            </div>
+            
+            <p>
+                Nous comprenons que cette situation puisse être contraignante et nous sommes à votre disposition pour vous accompagner dans la résolution de ce problème.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>
+                L'équipe Event Planner<br>
+                Merci de votre compréhension et de votre coopération.
+            </p>
+            
+            <p style="margin-top: 20px; font-size: 12px;">
+                © 2024 Event Planner. Tous droits réservés.<br>
+                Vous recevez cet email suite à la suspension de votre compte Event Planner.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

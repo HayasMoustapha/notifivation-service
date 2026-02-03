@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vérifiez votre adresse email - Event Planner</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 20px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .verification-icon {
+            font-size: 48px;
+            color: #007bff;
+            margin-bottom: 20px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .verification-title {
+            font-size: 24px;
+            color: #007bff;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .verification-code {
+            background-color: #f8f9fa;
+            border: 2px dashed #007bff;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 32px;
+            font-weight: bold;
+            color: #007bff;
+            letter-spacing: 5px;
+        }
+        .verify-button {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .info-box {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🔐 Event Planner</div>
+            <div class="verification-icon">✉️</div>
+            <h1>Vérifiez votre adresse email</h1>
+        </div>
+        
+        <div class="content">
+            <p class="verification-title">
+                Bonjour {{firstName}} {{lastName}} !
+            </p>
+            
+            <p>
+                Merci de vous être inscrit sur Event Planner ! Pour finaliser votre inscription et accéder à toutes les fonctionnalités, veuillez vérifier votre adresse email.
+            </p>
+            
+            <p>
+                Vous avez deux options pour vérifier votre email :
+            </p>
+            
+            <!-- Option 1: Lien direct -->
+            <div style="text-align: center;">
+                <a href="{{verificationLink}}" class="verify-button">Vérifier mon adresse email</a>
+            </div>
+            
+            <div style="text-align: center; margin: 20px 0;">
+                <strong>OU</strong>
+            </div>
+            
+            <!-- Option 2: Code manuel -->
+            <div class="verification-code">
+                {{verificationCode}}
+            </div>
+            
+            <p style="text-align: center;">
+                Entrez ce code manuellement dans la page de vérification
+            </p>
+            
+            <div class="info-box">
+                <h3>⏰ Important :</h3>
+                <ul>
+                    <li>Ce code expire dans <strong>{{expiryHours}}</strong> heures</li>
+                    <li>Si vous n'avez pas demandé cette vérification, ignorez cet email</li>
+                    <li>Ne partagez jamais ce code avec qui que ce soit</li>
+                </ul>
+            </div>
+            
+            <p>
+                Une fois votre email vérifié, vous pourrez :
+            </p>
+            <ul>
+                <li>Créer et gérer vos événements</li>
+                <li>Vendre des tickets en ligne</li>
+                <li>Accéder à toutes les fonctionnalités avancées</li>
+            </ul>
+        </div>
+        
+        <div class="footer">
+            <p>
+                Si vous rencontrez des difficultés, n'hésitez pas à contacter notre support.<br>
+                Email : {{supportEmail}}
+            </p>
+            
+            <p style="margin-top: 20px; font-size: 12px;">
+                © 2024 Event Planner. Tous droits réservés.<br>
+                Vous recevez cet email pour vérifier votre adresse email sur Event Planner.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

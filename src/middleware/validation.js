@@ -19,25 +19,31 @@ const schemas = {
     template: Joi.string().valid(
       'welcome', 
       'account-activated', 
+      'account-suspended',
+      'email-verification',
       'password-reset', 
+      'password-changed',
       'event-confirmation', 
       'event-notification', 
       'event-cancelled', 
+      'event-reminder',
+      'event-invitation',
       'payment-confirmation', 
       'payment-failed',
       'ticket-generated', 
+      'ticket-purchased',
       'ticket-reminder',
       'security-alert',
-      'event-invitation',
       'refund-processed',
       'fraud-detected',
       'daily-scan-report',
+      'appointment-reminder',
       'test-simple',
       'refund-processed-simple',
       'payment-failed-simple',
       'fraud-detected-simple'
     ).required().messages({
-      'any.only': 'Le template doit être l\'un des suivants: welcome, account-activated, password-reset, event-confirmation, event-notification, event-cancelled, payment-confirmation, payment-failed, ticket-generated, ticket-reminder, security-alert, event-invitation, refund-processed, fraud-detected, daily-scan-report, test-simple, refund-processed-simple, payment-failed-simple, fraud-detected-simple',
+      'any.only': 'Le template doit être l\'un des suivants: welcome, account-activated, account-suspended, email-verification, password-reset, password-changed, event-confirmation, event-notification, event-cancelled, event-reminder, event-invitation, payment-confirmation, payment-failed, ticket-generated, ticket-purchased, ticket-reminder, security-alert, refund-processed, fraud-detected, daily-scan-report, appointment-reminder, test-simple, refund-processed-simple, payment-failed-simple, fraud-detected-simple',
       'any.required': 'Le template est requis'
     }),
     data: Joi.object().required().messages({
