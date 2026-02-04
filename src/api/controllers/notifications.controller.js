@@ -88,7 +88,7 @@ class NotificationsController {
         ip: req.ip
       });
 
-      // En mode développement, simuler l'envoi SMS
+      // En mode développement, simuler l'envoi SMS (sans bloquer les workflows)
       if (process.env.NODE_ENV === 'development') {
         const mockResult = {
           success: true,
@@ -104,6 +104,22 @@ class NotificationsController {
           to: smsService.maskPhoneNumber(to)
         });
 
+        // Persister la notification même en mode mock pour garder une trace
+        await notificationRepository.createNotification({
+          type: 'sms',
+          status: 'sent',
+          priority: 1,
+          templateName: template,
+          templateData: data || null,
+          recipientPhone: to,
+          provider: mockResult.provider,
+          providerResponse: mockResult,
+          providerMessageId: mockResult.messageId,
+          sentAt: mockResult.sentAt,
+          retryCount: 0,
+          maxRetries: 3
+        });
+
         return res.status(201).json(
           notificationResultResponse(mockResult)
         );
@@ -112,6 +128,24 @@ class NotificationsController {
       const result = await smsService.sendTransactionalSMS(to, template, data, {
         ...options,
         ip: req.ip
+      });
+
+      await notificationRepository.createNotification({
+        type: 'sms',
+        status: result.success ? 'sent' : 'failed',
+        priority: 1,
+        templateName: template,
+        templateData: data || null,
+        recipientPhone: to,
+        provider: result.provider || (result.fallback ? 'fallback' : null),
+        providerResponse: result,
+        providerMessageId: result.messageId || null,
+        sentAt: result.success ? new Date().toISOString() : null,
+        failedAt: result.success ? null : new Date().toISOString(),
+        errorMessage: result.success ? null : (result.error || result.reason || result.details?.message || 'SMS send failed'),
+        errorCode: result.success ? null : 'SMS_SEND_FAILED',
+        retryCount: 0,
+        maxRetries: 3
       });
 
       return res.status(201).json(

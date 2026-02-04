@@ -187,13 +187,20 @@ class EmailService {
       }
     }
 
-    // Aucun service disponible
+    // Aucun service disponible : en dev/test on mocke pour ne pas bloquer les workflows
     if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
-      logger.warn('Email fallback - no service configured', {
+      const responseTime = Date.now() - startTime;
+      logger.warn('Email mock - no provider configured', {
         to: mailOptions.to,
         subject: mailOptions.subject
       });
-      return { success: false, fallback: true, reason: 'No email service configured' };
+      return {
+        success: true,
+        provider: 'mock',
+        messageId: `mock-email-${Date.now()}`,
+        responseTime,
+        fallback: true
+      };
     }
 
     return {
