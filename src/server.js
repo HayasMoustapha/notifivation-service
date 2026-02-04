@@ -121,7 +121,9 @@ class NotificationServer {
     // 📧 RATE LIMITING SPÉCIFIQUE EMAILS : Protection contre le spam d'emails
     const emailLimiter = rateLimit({
       windowMs: 60 * 1000, // 1 minute
-      max: parseInt(process.env.EMAIL_RATE_LIMIT) || 10, // 10 emails max par minute
+      max: process.env.NODE_ENV === 'development'
+        ? 1000
+        : (parseInt(process.env.EMAIL_RATE_LIMIT) || 10), // 10 emails max par minute
       message: {
         success: false,
         message: 'Limite d\'emails atteinte, veuillez réessayer plus tard',

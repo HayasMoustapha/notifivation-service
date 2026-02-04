@@ -129,6 +129,19 @@ const templates = [
     }
   },
   {
+    name: 'event_invitation',
+    data: {
+      invitationCode: 'INV-123456',
+      guestName: 'Test User',
+      eventTitle: 'Invitation Event',
+      eventDescription: 'Un événement de démonstration',
+      eventDate: '10/02/2026',
+      location: 'Paris',
+      acceptUrl: 'https://eventplanner.com/invitations/INV-123456/accept',
+      declineUrl: 'https://eventplanner.com/invitations/INV-123456/decline'
+    }
+  },
+  {
     name: 'payment-confirmation',
     data: {
       firstName: 'Test',
@@ -169,6 +182,15 @@ const templates = [
     }
   },
   {
+    name: 'ticket_confirmation',
+    data: {
+      eventTitle: 'Test Event',
+      eventDate: '10/02/2026',
+      ticketCode: 'TKT-001',
+      pdfUrl: 'https://eventplanner.com/tickets/TKT-001.pdf'
+    }
+  },
+  {
     name: 'ticket-purchased',
     data: {
       firstName: 'Test',
@@ -201,6 +223,27 @@ const templates = [
       eventDate: '10/02/2026',
       eventTime: '18:00',
       eventLocation: 'Test Location'
+    }
+  },
+  {
+    name: 'ticket-generation-error',
+    data: {
+      eventName: 'Test Event',
+      jobId: 'JOB-001',
+      error: 'Erreur lors du rendu PDF',
+      supportEmail: 'support@eventplanner.com',
+      retryUrl: 'https://eventplanner.com/tickets/retry/JOB-001'
+    }
+  },
+  {
+    name: 'batch-generation-complete',
+    data: {
+      eventName: 'Test Event',
+      totalTickets: 120,
+      successfulTickets: 118,
+      failedTickets: 2,
+      jobId: 'JOB-002',
+      downloadUrl: 'https://eventplanner.com/tickets/batch/JOB-002/download'
     }
   },
   {
