@@ -16,7 +16,8 @@ class EmailService {
     this.smtpConfigured = false;
     this.sendgridConfigured = false;
     this.templates = new Map();
-    this.initialize();
+    this.initialized = false;
+    this.initPromise = this.initialize();
   }
 
   /**
@@ -74,7 +75,24 @@ class EmailService {
       logger.error('Failed to initialize email service', { error: error.message });
       this.smtpConfigured = false;
       this.sendgridConfigured = false;
+    } finally {
+      this.initialized = true;
     }
+  }
+
+  /**
+   * S'assure que le service email est initialisé avant tout envoi
+   */
+  async ensureInitialized() {
+    if (this.initialized) {
+      return;
+    }
+
+    if (!this.initPromise) {
+      this.initPromise = this.initialize();
+    }
+
+    await this.initPromise;
   }
 
   /**
@@ -223,6 +241,7 @@ class EmailService {
    */
   async sendTransactionalEmail(to, template, data, options = {}) {
     try {
+      await this.ensureInitialized();
       const { subject, html, text } = await this.generateEmailContent(template, data, options);
       
       const mailOptions = {
@@ -276,7 +295,7 @@ class EmailService {
       let html, text, subject;
 
       // Utiliser le template Handlebars si disponible
-      const templateFn = this.templates.get(template);
+      let templateFn = this.templates.get(template);
       if (templateFn) {
         try {
           // Essayer de compiler avec les données
@@ -294,6 +313,19 @@ class EmailService {
           subject = data.subject || `Notification Event Planner - ${template}`;
         }
       } else {
+        if (this.templates.size === 0) {
+          await this.loadTemplates();
+          templateFn = this.templates.get(template);
+        }
+
+        if (templateFn) {
+          const compiledData = { ...data, ...options };
+          html = templateFn(compiledData);
+          text = this.htmlToText(html);
+          subject = data.subject || this.getDefaultSubject(template);
+          return { html, text, subject };
+        }
+
         console.log(`[DEBUG] Template ${template} not found, using default template`);
         // Templates inline par défaut
         const defaultTemplate = this.getDefaultTemplate(template);
