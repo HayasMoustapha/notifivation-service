@@ -1,6 +1,7 @@
 const emailService = require('../../core/email/email.service');
 const smsService = require('../../core/sms/sms.service');
 const queueService = require('../../core/queues/queue.service');
+const notificationRepository = require('../../core/database/notification.repository');
 const { 
   successResponse, 
   createdResponse, 
@@ -36,6 +37,26 @@ class NotificationsController {
       const result = await emailService.sendTransactionalEmail(to, template, data, {
         ...options,
         ip: req.ip
+      });
+
+      await notificationRepository.createNotification({
+        type: 'email',
+        status: result.success ? 'sent' : 'failed',
+        priority: 1,
+        subject: data?.subject || null,
+        templateName: template,
+        templateData: data || null,
+        recipientEmail: to,
+        recipientName: data?.name || data?.fullName || null,
+        provider: result.provider || (result.fallback ? 'fallback' : null),
+        providerResponse: result,
+        providerMessageId: result.messageId || null,
+        sentAt: result.success ? new Date().toISOString() : null,
+        failedAt: result.success ? null : new Date().toISOString(),
+        errorMessage: result.success ? null : (result.error || result.reason || result.details?.message || 'Email send failed'),
+        errorCode: result.success ? null : 'EMAIL_SEND_FAILED',
+        retryCount: 0,
+        maxRetries: 3
       });
 
       return res.status(201).json(

@@ -356,7 +356,114 @@ async function getNotificationStatistics(filters = {}) {
   }
 }
 
+/**
+ * Crée une notification
+ * @param {Object} payload - Données de la notification
+ * @returns {Promise<Object>} Notification créée
+ */
+async function createNotification(payload) {
+  const db = getDatabase();
+
+  try {
+    const {
+      type,
+      status,
+      priority = 1,
+      subject = null,
+      content = null,
+      htmlContent = null,
+      templateName = null,
+      templateData = null,
+      recipientEmail = null,
+      recipientPhone = null,
+      recipientName = null,
+      senderId = null,
+      eventId = null,
+      batchId = null,
+      externalId = null,
+      provider = null,
+      providerResponse = null,
+      providerMessageId = null,
+      scheduledAt = null,
+      sentAt = null,
+      failedAt = null,
+      errorMessage = null,
+      errorCode = null,
+      retryCount = 0,
+      maxRetries = 3
+    } = payload;
+
+    const query = `
+      INSERT INTO notifications (
+        type,
+        status,
+        priority,
+        subject,
+        content,
+        html_content,
+        template_name,
+        template_data,
+        recipient_email,
+        recipient_phone,
+        recipient_name,
+        sender_id,
+        event_id,
+        batch_id,
+        external_id,
+        provider,
+        provider_response,
+        provider_message_id,
+        scheduled_at,
+        sent_at,
+        failed_at,
+        error_message,
+        error_code,
+        retry_count,
+        max_retries
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25
+      )
+      RETURNING *
+    `;
+
+    const values = [
+      type,
+      status,
+      priority,
+      subject,
+      content,
+      htmlContent,
+      templateName,
+      templateData,
+      recipientEmail,
+      recipientPhone,
+      recipientName,
+      senderId,
+      eventId,
+      batchId,
+      externalId,
+      provider,
+      providerResponse,
+      providerMessageId,
+      scheduledAt,
+      sentAt,
+      failedAt,
+      errorMessage,
+      errorCode,
+      retryCount,
+      maxRetries
+    ];
+
+    const result = await db.query(query, values);
+    return result.rows[0];
+  } catch (error) {
+    console.error('[NOTIFICATION_REPOSITORY] Erreur création notification:', error.message);
+    throw error;
+  }
+}
+
 module.exports = {
+  createNotification,
   getNotificationById,
   getNotificationHistory,
   getNotificationStatistics
