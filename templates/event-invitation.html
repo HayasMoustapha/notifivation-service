@@ -156,6 +156,35 @@
                 </p>
             </div>
             {{/if}}
+
+            {{#if loginUrl}}
+            <div class="event-info">
+                <h3>🔐 Accès à la plateforme</h3>
+                <p>
+                    <strong>Lien de connexion :</strong> <a href="{{loginUrl}}">{{loginUrl}}</a><br>
+                    {{#if defaultPassword}}
+                    <strong>Mot de passe temporaire :</strong> {{defaultPassword}}<br>
+                    {{/if}}
+                </p>
+            </div>
+            {{/if}}
+
+            {{#if ticketAccessUrl}}
+            <div class="event-info">
+                <h3>🎫 Votre billet</h3>
+                <p>
+                    {{#if isFreeEvent}}
+                    L'événement est gratuit. Vous pouvez télécharger votre billet ici :<br>
+                    {{#if ticketDownloadUrl}}
+                    <a href="{{ticketDownloadUrl}}">{{ticketDownloadUrl}}</a><br>
+                    {{/if}}
+                    {{else}}
+                    L'événement est payant. Achetez votre billet ici :<br>
+                    <a href="{{ticketAccessUrl}}">{{ticketAccessUrl}}</a><br>
+                    {{/if}}
+                </p>
+            </div>
+            {{/if}}
             
             <div class="rsvp-section">
                 <h3>✅ Votre réponse est attendue</h3>
