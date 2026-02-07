@@ -1,13 +1,78 @@
 const nodemailer = require('nodemailer');
 const sendgridMail = require('@sendgrid/mail');
-const handlebars = require('handlebars');
 const fs = require('fs').promises;
 const path = require('path');
 const logger = require('../../utils/logger');
 
+function getValueByPath(obj, pathStr) {
+  if (!pathStr) return undefined;
+  return pathStr.split('.').reduce((acc, key) => (acc ? acc[key] : undefined), obj);
+}
+
+function parseTokens(expr) {
+  const tokens = [];
+  const re = /"([^"]*)"|'([^']*)'|([^\s]+)/g;
+  let match;
+  while ((match = re.exec(expr)) !== null) {
+    if (match[1] !== undefined) tokens.push(match[1]);
+    else if (match[2] !== undefined) tokens.push(match[2]);
+    else tokens.push(match[3]);
+  }
+  return tokens;
+}
+
+function evaluateCondition(expr, data) {
+  const trimmed = expr.trim();
+  if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+    const inner = trimmed.slice(1, -1).trim();
+    const tokens = parseTokens(inner);
+    const op = tokens[0];
+    if (op === 'eq') {
+      const left = getValueByPath(data, tokens[1]) ?? tokens[1];
+      const right = getValueByPath(data, tokens[2]) ?? tokens[2];
+      return String(left) === String(right);
+    }
+    if (op === 'gt') {
+      const leftVal = getValueByPath(data, tokens[1]) ?? tokens[1];
+      const rightVal = getValueByPath(data, tokens[2]) ?? tokens[2];
+      const left = Number(leftVal);
+      const right = Number(rightVal);
+      if (Number.isNaN(left) || Number.isNaN(right)) return false;
+      return left > right;
+    }
+    return false;
+  }
+
+  const value = getValueByPath(data, trimmed);
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'string') return value.trim().length > 0;
+  return Boolean(value);
+}
+
+function renderTemplateContent(template, data) {
+  if (!template) return '';
+  let output = template;
+
+  const ifBlockRegex = /\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g;
+  let safety = 0;
+  while (ifBlockRegex.test(output) && safety < 50) {
+    safety += 1;
+    output = output.replace(ifBlockRegex, (match, condition, content) => {
+      return evaluateCondition(condition, data) ? content : '';
+    });
+  }
+
+  output = output.replace(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g, (match, key) => {
+    const value = getValueByPath(data, key);
+    return value === undefined || value === null ? '' : String(value);
+  });
+
+  return output;
+}
+
 /**
  * Service d'envoi d'emails transactionnels
- * Utilise Nodemailer (SMTP) + SendGrid fallback avec templates Handlebars
+ * Utilise Nodemailer (SMTP) + SendGrid fallback avec rendu template natif
  */
 class EmailService {
   constructor() {
@@ -103,7 +168,7 @@ class EmailService {
   }
 
   /**
-   * Charge les templates Handlebars depuis le système de fichiers
+   * Charge les templates depuis le système de fichiers
    */
   async loadTemplates() {
     try {
@@ -123,7 +188,7 @@ class EmailService {
         if (file.endsWith('.html')) {
           const templateName = path.basename(file, '.html');
           const templateContent = await fs.readFile(path.join(templatesDir, file), 'utf8');
-          this.templates.set(templateName, handlebars.compile(templateContent));
+          this.templates.set(templateName, templateContent);
           logger.info(`Loaded template: ${templateName}`);
         }
       }
@@ -294,20 +359,18 @@ class EmailService {
     try {
       let html, text, subject;
 
-      // Utiliser le template Handlebars si disponible
-      let templateFn = this.templates.get(template);
-      if (templateFn) {
+      // Utiliser le template natif si disponible
+      let templateContent = this.templates.get(template);
+      if (templateContent) {
         try {
-          // Essayer de compiler avec les données
           const compiledData = { ...data, ...options };
-          console.log(`[DEBUG] Compiling template ${template} with data:`, Object.keys(compiledData));
-          html = templateFn(compiledData);
-          console.log(`[DEBUG] Template ${template} compiled successfully, HTML length:`, html.length);
+          console.log(`[DEBUG] Rendering template ${template} with data:`, Object.keys(compiledData));
+          html = renderTemplateContent(templateContent, compiledData);
+          console.log(`[DEBUG] Template ${template} rendered successfully, HTML length:`, html.length);
           text = this.htmlToText(html);
           subject = data.subject || this.getDefaultSubject(template);
         } catch (templateError) {
-          console.error(`[DEBUG] Template compilation failed for ${template}:`, templateError.message);
-          // Utiliser un template de fallback en cas d'erreur
+          console.error(`[DEBUG] Template rendering failed for ${template}:`, templateError.message);
           html = this.generateFallbackHTML(template, data, options);
           text = this.htmlToText(html);
           subject = data.subject || `Notification Event Planner - ${template}`;
@@ -315,12 +378,12 @@ class EmailService {
       } else {
         if (this.templates.size === 0) {
           await this.loadTemplates();
-          templateFn = this.templates.get(template);
+          templateContent = this.templates.get(template);
         }
 
-        if (templateFn) {
+        if (templateContent) {
           const compiledData = { ...data, ...options };
-          html = templateFn(compiledData);
+          html = renderTemplateContent(templateContent, compiledData);
           text = this.htmlToText(html);
           subject = data.subject || this.getDefaultSubject(template);
           return { html, text, subject };
@@ -329,8 +392,7 @@ class EmailService {
         console.log(`[DEBUG] Template ${template} not found, using default template`);
         // Templates inline par défaut
         const defaultTemplate = this.getDefaultTemplate(template);
-        const compiledTemplate = handlebars.compile(defaultTemplate.html);
-        html = compiledTemplate({ ...data, ...options });
+        html = renderTemplateContent(defaultTemplate.html, { ...data, ...options });
         text = defaultTemplate.text || this.htmlToText(html);
         subject = data.subject || defaultTemplate.subject;
       }

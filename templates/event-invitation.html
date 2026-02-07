@@ -169,6 +169,18 @@
             </div>
             {{/if}}
 
+            {{#if loginUrl}}
+            <div class="event-info">
+                <h3>🔐 Accès à la plateforme</h3>
+                <p>
+                    <strong>Connexion :</strong> <a href="{{loginUrl}}">{{loginUrl}}</a><br>
+                    {{#if defaultPassword}}
+                    <strong>Mot de passe temporaire :</strong> {{defaultPassword}}<br>
+                    {{/if}}
+                </p>
+            </div>
+            {{/if}}
+
             {{#if ticketAccessUrl}}
             <div class="event-info">
                 <h3>🎫 Votre billet</h3>
