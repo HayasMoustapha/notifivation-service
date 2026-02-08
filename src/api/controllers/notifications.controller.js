@@ -164,11 +164,11 @@ class NotificationsController {
 
   async queueSMS(req, res) {
     try {
-      const { phoneNumber, template, data, options = {} } = req.body;
+      const { to, template, data, options = {} } = req.body;
 
       const result = await queueService.addSMSJob({
         type: 'transactional',
-        phoneNumber,
+        phoneNumber: to,
         template,
         data,
         options: { ...options, ip: req.ip }

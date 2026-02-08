@@ -4,33 +4,42 @@ const logger = require('../utils/logger');
 
 /**
  * Middleware de validation avec Joi
+ *
+ * Aligné sur :
+ *   1. Schema SQL (notification_templates, notifications, notification_preferences, notification_logs)
+ *   2. Repository / Service / Controller
  */
 
 /**
  * Schémas de validation pour les différentes requêtes
  */
 const schemas = {
+  // ========================================
+  // EMAIL
+  // ========================================
+
   // Validation pour l'envoi d'email
+  // Controller: const { to, template, data, options } = req.body
   sendEmail: Joi.object({
     to: Joi.string().email().required().messages({
       'string.email': 'L\'email du destinataire doit être valide',
       'any.required': 'L\'email du destinataire est requis'
     }),
     template: Joi.string().valid(
-      'welcome', 
-      'account-activated', 
+      'welcome',
+      'account-activated',
       'account-suspended',
       'email-verification',
-      'password-reset', 
+      'password-reset',
       'password-changed',
-      'event-confirmation', 
-      'event-notification', 
-      'event-cancelled', 
+      'event-confirmation',
+      'event-notification',
+      'event-cancelled',
       'event-reminder',
       'event-invitation',
-      'payment-confirmation', 
+      'payment-confirmation',
       'payment-failed',
-      'ticket-generated', 
+      'ticket-generated',
       'ticket-purchased',
       'ticket-reminder',
       'security-alert',
@@ -43,30 +52,37 @@ const schemas = {
       'payment-failed-simple',
       'fraud-detected-simple'
     ).required().messages({
-      'any.only': 'Le template doit être l\'un des suivants: welcome, account-activated, account-suspended, email-verification, password-reset, password-changed, event-confirmation, event-notification, event-cancelled, event-reminder, event-invitation, payment-confirmation, payment-failed, ticket-generated, ticket-purchased, ticket-reminder, security-alert, refund-processed, fraud-detected, daily-scan-report, appointment-reminder, test-simple, refund-processed-simple, payment-failed-simple, fraud-detected-simple',
+      'any.only': 'Le template spécifié n\'est pas valide',
       'any.required': 'Le template est requis'
     }),
     data: Joi.object().required().messages({
       'any.required': 'Les données du template sont requises'
     }),
     options: Joi.object({
-      fromName: Joi.string().max(100).optional().messages({
-        'string.max': 'Le nom de l\'expéditeur ne peut dépasser 100 caractères'
-      }),
-      priority: Joi.string().valid('low', 'normal', 'high').optional().messages({
-        'any.only': 'La priorité doit être l\'une des suivantes: low, normal, high'
-      })
+      fromName: Joi.string().max(100).optional(),
+      priority: Joi.string().valid('low', 'normal', 'high').optional()
     }).optional()
   }),
 
+  // ========================================
+  // SMS
+  // ========================================
+
   // Validation pour l'envoi de SMS
+  // Controller sendSMS: const { to, template, data, options } = req.body
+  // Controller queueSMS: const { to, template, data, options } = req.body
   sendSMS: Joi.object({
     to: Joi.string().pattern(/^[+]?[\d\s-()]+$/).required().messages({
       'string.pattern.base': 'Le numéro de téléphone doit être valide',
       'any.required': 'Le numéro de téléphone est requis'
     }),
-    template: Joi.string().valid('otp', 'appointment-reminder', 'payment-confirmation', 'security-alert').required().messages({
-      'any.only': 'Le template doit être l\'un des suivants: otp, appointment-reminder, payment-confirmation, security-alert',
+    template: Joi.string().valid(
+      'otp',
+      'appointment-reminder',
+      'payment-confirmation',
+      'security-alert'
+    ).required().messages({
+      'any.only': 'Le template SMS doit être l\'un des suivants: otp, appointment-reminder, payment-confirmation, security-alert',
       'any.required': 'Le template est requis'
     }),
     data: Joi.object().required().messages({
@@ -74,79 +90,93 @@ const schemas = {
     })
   }),
 
+  // ========================================
+  // BULK
+  // ========================================
+
   // Validation pour l'envoi en lot d'emails
+  // Controller: const { recipients, template, data, options } = req.body
+  // emailService.queueBulkEmail(recipients, template, data, options)
   sendBulkEmail: Joi.object({
-    emails: Joi.array().items(Joi.object({
-      to: Joi.string().email().required(),
-      template: Joi.string().valid(
-        'welcome', 
-        'account-activated', 
-        'password-reset', 
-        'event-confirmation', 
-        'event-notification', 
-        'event-cancelled', 
-        'payment-confirmation', 
-        'payment-failed',
-        'ticket-generated', 
-        'ticket-reminder',
-        'security-alert',
-        'event-invitation',
-        'refund-processed',
-        'fraud-detected',
-        'daily-scan-report'
-      ).required(),
-      data: Joi.object().required()
-    })).min(1).max(100).required().messages({
-      'array.min': 'Au moins un email est requis',
-      'array.max': 'Maximum 100 emails par requête'
-    })
+    recipients: Joi.array().items(
+      Joi.string().email()
+    ).min(1).max(100).required().messages({
+      'array.min': 'Au moins un destinataire est requis',
+      'array.max': 'Maximum 100 destinataires par requête',
+      'any.required': 'La liste des destinataires est requise'
+    }),
+    template: Joi.string().valid(
+      'welcome',
+      'account-activated',
+      'password-reset',
+      'event-confirmation',
+      'event-notification',
+      'event-cancelled',
+      'payment-confirmation',
+      'payment-failed',
+      'ticket-generated',
+      'ticket-reminder',
+      'security-alert',
+      'event-invitation',
+      'refund-processed',
+      'fraud-detected',
+      'daily-scan-report'
+    ).required().messages({
+      'any.required': 'Le template est requis'
+    }),
+    data: Joi.object().required().messages({
+      'any.required': 'Les données du template sont requises'
+    }),
+    options: Joi.object({
+      fromName: Joi.string().max(100).optional(),
+      priority: Joi.string().valid('low', 'normal', 'high').optional()
+    }).optional()
   }),
 
-  // Validation pour l'envoi en lot de SMS
+  // Validation pour l'envoi en lot de SMS (pas de route dédiée, mais gardé pour cohérence)
   sendBulkSMS: Joi.object({
-    sms: Joi.array().items(Joi.object({
-      to: Joi.string().pattern(/^[+]?[\d\s-()]+$/).required(),
-      template: Joi.string().valid('otp', 'appointment-reminder', 'payment-confirmation', 'security-alert').required(),
-      data: Joi.object().required()
-    })).min(1).max(100).required().messages({
-      'array.min': 'Au moins un SMS est requis',
-      'array.max': 'Maximum 100 SMS par requête'
-    })
+    recipients: Joi.array().items(
+      Joi.string().pattern(/^[+]?[\d\s-()]+$/)
+    ).min(1).max(100).required().messages({
+      'array.min': 'Au moins un destinataire est requis',
+      'array.max': 'Maximum 100 destinataires par requête'
+    }),
+    template: Joi.string().valid(
+      'otp',
+      'appointment-reminder',
+      'payment-confirmation',
+      'security-alert'
+    ).required(),
+    data: Joi.object().required()
   }),
 
   // Validation pour l'envoi mixte en lot
+  // Controller: const { recipients, template, data, options } = req.body
+  // queueService.addBulkJob({ type: options.type, recipients, template, data, options })
   sendBulkMixed: Joi.object({
-    emails: Joi.array().items(Joi.object({
-      to: Joi.string().email().required(),
-      template: Joi.string().valid(
-        'welcome', 
-        'account-activated', 
-        'password-reset', 
-        'event-confirmation', 
-        'event-notification', 
-        'event-cancelled', 
-        'payment-confirmation', 
-        'payment-failed',
-        'ticket-generated', 
-        'ticket-reminder',
-        'security-alert',
-        'event-invitation',
-        'refund-processed',
-        'fraud-detected',
-        'daily-scan-report'
-      ).required(),
-      data: Joi.object().required()
-    })).optional(),
-    sms: Joi.array().items(Joi.object({
-      to: Joi.string().pattern(/^[+]?[\d\s-()]+$/).required(),
-      template: Joi.string().valid('otp', 'appointment-reminder', 'payment-confirmation', 'security-alert').required(),
-      data: Joi.object().required()
-    })).optional()
-  }).or('emails', 'sms').messages({
-    'object.missing': 'Au moins un tableau d\'emails ou de SMS est requis'
+    recipients: Joi.array().items(
+      Joi.string().required()
+    ).min(1).max(100).required().messages({
+      'array.min': 'Au moins un destinataire est requis',
+      'array.max': 'Maximum 100 destinataires par requête'
+    }),
+    template: Joi.string().required().messages({
+      'any.required': 'Le template est requis'
+    }),
+    data: Joi.object().required().messages({
+      'any.required': 'Les données sont requises'
+    }),
+    options: Joi.object({
+      type: Joi.string().valid('email', 'sms', 'both').optional()
+    }).optional()
   }),
 
+  // ========================================
+  // PUSH
+  // ========================================
+
   // Validation pour l'envoi de notification push
+  // Controller: const { token, template, data, options } = req.body
   sendPush: Joi.object({
     token: Joi.string().min(10).required().messages({
       'string.min': 'Le token push doit contenir au moins 10 caractères',
@@ -170,9 +200,10 @@ const schemas = {
   }),
 
   // Validation pour l'envoi en lot de notifications push
+  // Controller: const { tokens, template, data, options } = req.body
   sendBulkPush: Joi.object({
     tokens: Joi.array().items(
-      Joi.string().min(10).required()
+      Joi.string().min(10)
     ).min(1).max(500).required().messages({
       'array.min': 'Au moins un token push est requis',
       'array.max': 'Maximum 500 tokens par requête'
@@ -188,7 +219,14 @@ const schemas = {
     }).optional()
   }),
 
+  // ========================================
+  // IN-APP NOTIFICATIONS
+  // ========================================
+
   // Validation pour la création de notification in-app
+  // Controller: const { userId, type, title, message } = req.body
+  // in-app.service: INSERT INTO notifications (user_id, template_id, type, channel, subject, content, ...)
+  // Schema: user_id UUID NOT NULL, type VARCHAR(50) NOT NULL, subject VARCHAR(255), content TEXT
   createInAppNotification: Joi.object({
     userId: Joi.alternatives().try(
       Joi.string().uuid(),
@@ -202,65 +240,58 @@ const schemas = {
       'any.required': 'Le type est requis'
     }),
     title: Joi.string().min(1).max(255).required().messages({
+      'string.max': 'Le titre ne peut dépasser 255 caractères',
       'any.required': 'Le titre est requis'
     }),
-    message: Joi.string().max(2000).optional(),
-    data: Joi.object().optional(),
-    category: Joi.string().max(50).optional(),
-    priority: Joi.string().valid('low', 'normal', 'high', 'urgent').optional(),
-    expiresAt: Joi.date().iso().optional(),
-    actionUrl: Joi.string().uri().max(500).optional(),
-    actionText: Joi.string().max(100).optional()
+    message: Joi.string().max(2000).optional()
   }),
 
   // Validation pour marquer comme lu
+  // Controller: const { userId } = req.body
   markAsRead: Joi.object({
-    userId: Joi.string().uuid().optional()
+    userId: Joi.alternatives().try(
+      Joi.string().uuid(),
+      Joi.number().integer().positive()
+    ).optional()
   }),
 
   // Validation pour marquer tout comme lu
+  // Controller: const { type } = req.body
   markAllAsRead: Joi.object({
-    type: Joi.string().valid('info', 'success', 'warning', 'error', 'event', 'payment', 'system').optional(),
-    category: Joi.string().max(50).optional()
+    type: Joi.string().valid('info', 'success', 'warning', 'error', 'event', 'payment', 'system').optional()
   }),
 
   // Validation pour suppression de notification in-app
+  // Controller: const { userId } = req.body
   deleteInAppNotification: Joi.object({
-    userId: Joi.string().uuid().optional()
+    userId: Joi.alternatives().try(
+      Joi.string().uuid(),
+      Joi.number().integer().positive()
+    ).optional()
   }),
 
+  // ========================================
+  // PREFERENCES
+  // ========================================
+
   // Validation pour mise à jour des préférences utilisateur
+  // Controller: const preferences = req.body -> preferencesService.updateUserPreferences(userId, preferences)
+  // Service: const { channels = {} } = preferences; channels keys: 'email', 'sms', 'push', 'in_app'
+  // Schema: notification_preferences (user_id, channel CHECK IN ('email','sms','push','in_app'), is_enabled BOOLEAN)
   updateUserPreferences: Joi.object({
     channels: Joi.object({
       email: Joi.boolean().optional(),
       sms: Joi.boolean().optional(),
       push: Joi.boolean().optional(),
-      inApp: Joi.boolean().optional()
-    }).optional(),
-    eventTypes: Joi.object({
-      invitations: Joi.boolean().optional(),
-      reminders: Joi.boolean().optional(),
-      updates: Joi.boolean().optional(),
-      paymentConfirmations: Joi.boolean().optional(),
-      paymentFailures: Joi.boolean().optional(),
-      accountChanges: Joi.boolean().optional(),
-      marketingEmails: Joi.boolean().optional(),
-      systemAlerts: Joi.boolean().optional()
-    }).optional(),
-    timing: Joi.object({
-      reminderTiming: Joi.string().valid('1h', '6h', '12h', '24h', '48h', '1w').optional(),
-      quietHoursStart: Joi.string().pattern(/^\d{2}:\d{2}$/).optional(),
-      quietHoursEnd: Joi.string().pattern(/^\d{2}:\d{2}$/).optional(),
-      timezone: Joi.string().max(50).optional()
-    }).optional(),
-    contacts: Joi.object({
-      email: Joi.string().email().optional(),
-      phone: Joi.string().pattern(/^[+]?[\d\s-()]+$/).optional(),
-      pushTokens: Joi.array().items(Joi.string()).optional()
-    }).optional()
+      in_app: Joi.boolean().optional()
+    }).min(1).required().messages({
+      'object.min': 'Au moins un canal doit être spécifié',
+      'any.required': 'L\'objet channels est requis'
+    })
   }),
 
   // Validation pour le désabonnement
+  // Controller: const { userId } = req.body -> preferencesService.unsubscribeUser(userId)
   unsubscribeUser: Joi.object({
     userId: Joi.alternatives().try(
       Joi.string().uuid(),
@@ -268,46 +299,59 @@ const schemas = {
     ).required().messages({
       'alternatives.match': 'L\'ID utilisateur doit être un UUID valide ou un nombre entier positif',
       'any.required': 'L\'ID utilisateur est requis'
-    }),
-    token: Joi.string().optional()
+    })
   }),
 
+  // ========================================
+  // TEMPLATES
+  // ========================================
+
   // Validation pour la création de template
+  // Controller: const templateData = req.body -> templatesService.createTemplate(templateData)
+  // Service: const { name, channel, subjectTemplate, bodyTemplate, variables } = templateData
+  // Schema: notification_templates (name VARCHAR(100), channel CHECK IN ('email','sms','push'),
+  //         subject_template VARCHAR(255), body_template TEXT, variables JSONB)
   createTemplate: Joi.object({
-    name: Joi.string().min(1).max(100).required().messages({
+    name: Joi.string().min(3).max(100).required().messages({
+      'string.min': 'Le nom du template doit contenir au moins 3 caractères',
       'any.required': 'Le nom du template est requis'
     }),
-    type: Joi.string().valid('email', 'sms').required().messages({
-      'any.required': 'Le type du template est requis'
+    channel: Joi.string().valid('email', 'sms', 'push').required().messages({
+      'any.only': 'Le canal doit être email, sms ou push',
+      'any.required': 'Le canal est requis'
     }),
-    subject: Joi.string().max(255).optional(),
-    htmlContent: Joi.string().optional(),
-    textContent: Joi.string().optional(),
-    variables: Joi.object().optional(),
-    defaultData: Joi.object().optional(),
-    description: Joi.string().optional(),
-    category: Joi.string().max(50).optional()
+    subjectTemplate: Joi.string().max(255).optional().messages({
+      'string.max': 'Le sujet ne peut dépasser 255 caractères'
+    }),
+    bodyTemplate: Joi.string().optional(),
+    variables: Joi.alternatives().try(
+      Joi.object(),
+      Joi.array().items(Joi.string())
+    ).optional()
   }),
 
   // Validation pour la mise à jour de template
+  // Controller: const updates = req.body -> templatesService.updateTemplate(templateId, updates)
+  // Service allowedFields: subject_template (subjectTemplate), body_template (bodyTemplate), variables, channel
   updateTemplate: Joi.object({
-    name: Joi.string().min(1).max(100).optional(),
-    subject: Joi.string().max(255).optional(),
-    htmlContent: Joi.string().optional(),
-    textContent: Joi.string().optional(),
-    variables: Joi.object().optional(),
-    defaultData: Joi.object().optional(),
-    description: Joi.string().optional(),
-    category: Joi.string().max(50).optional(),
-    isActive: Joi.boolean().optional()
-  }).min(1),
+    channel: Joi.string().valid('email', 'sms', 'push').optional(),
+    subjectTemplate: Joi.string().max(255).optional(),
+    bodyTemplate: Joi.string().optional(),
+    variables: Joi.alternatives().try(
+      Joi.object(),
+      Joi.array().items(Joi.string())
+    ).optional()
+  }).min(1).messages({
+    'object.min': 'Au moins un champ à mettre à jour est requis'
+  }),
 
   // Validation pour l'aperçu de template
+  // Controller: const { data, channel } = req.body
   previewTemplate: Joi.object({
     data: Joi.object().required().messages({
       'any.required': 'Les données de prévisualisation sont requises'
     }),
-    type: Joi.string().valid('email', 'sms').optional()
+    channel: Joi.string().valid('email', 'sms', 'push').optional()
   }),
 
   // Validation pour l'import de templates
@@ -316,14 +360,23 @@ const schemas = {
     overwrite: Joi.boolean().default(false).optional()
   }),
 
+  // ========================================
+  // PARAMS
+  // ========================================
+
   // Schémas pour les paramètres de route
   params: {
+    // Schema: notifications.id = BIGSERIAL (integer)
     notificationId: Joi.object({
-      notificationId: Joi.string().uuid().required().messages({
-        'string.uuid': 'L\'ID de notification doit être un UUID valide',
+      notificationId: Joi.alternatives().try(
+        Joi.string().pattern(/^\d+$/),
+        Joi.number().integer().positive()
+      ).required().messages({
+        'alternatives.match': 'L\'ID de notification doit être un nombre entier positif',
         'any.required': 'L\'ID de notification est requis'
       })
     }),
+    // Schema: user_id UUID NOT NULL (peut aussi être integer selon contexte)
     userId: Joi.object({
       userId: Joi.alternatives().try(
         Joi.string().uuid(),
@@ -338,35 +391,49 @@ const schemas = {
         'any.required': 'Le nom du template est requis'
       })
     }),
+    // Schema: notification_templates.id = BIGSERIAL (integer)
     templateId: Joi.object({
-      templateId: Joi.string().uuid().required().messages({
-        'string.uuid': 'L\'ID du template doit être un UUID valide',
+      templateId: Joi.alternatives().try(
+        Joi.string().pattern(/^\d+$/),
+        Joi.number().integer().positive()
+      ).required().messages({
+        'alternatives.match': 'L\'ID du template doit être un nombre entier positif',
         'any.required': 'L\'ID du template est requis'
       })
     })
   },
 
+  // ========================================
+  // QUERY PARAMS (for GET endpoints)
+  // ========================================
+
   // Validation pour l'historique
+  // Controller: const { page, limit, type, status, channel, userId, startDate, endDate, orderBy, orderDirection } = req.query
   getHistory: Joi.object({
-    limit: Joi.number().integer().min(1).max(100).default(20),
-    offset: Joi.number().integer().min(0).default(0),
-    type: Joi.string().valid('email', 'sms', 'all').default('all'),
-    status: Joi.string().valid('pending', 'sent', 'failed', 'delivered').optional(),
-    dateFrom: Joi.date().optional(),
-    dateTo: Joi.date().optional()
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(50),
+    type: Joi.string().optional(),
+    status: Joi.string().valid('pending', 'sent', 'failed').optional(),
+    channel: Joi.string().valid('email', 'sms', 'push', 'in_app').optional(),
+    userId: Joi.string().optional(),
+    startDate: Joi.date().iso().optional(),
+    endDate: Joi.date().iso().optional(),
+    orderBy: Joi.string().valid('created_at', 'sent_at', 'status', 'type', 'channel').default('created_at'),
+    orderDirection: Joi.string().valid('ASC', 'DESC', 'asc', 'desc').default('DESC')
   }),
 
   // Validation pour les statistiques
+  // Controller: const { period, startDate, endDate, userId } = req.query
   getStatistics: Joi.object({
-    period: Joi.string().valid('day', 'week', 'month', 'year').default('month'),
-    type: Joi.string().valid('email', 'sms', 'all').default('all'),
-    dateFrom: Joi.date().optional(),
-    dateTo: Joi.date().optional()
+    period: Joi.string().valid('1d', '7d', '30d', '90d').default('7d'),
+    startDate: Joi.date().iso().optional(),
+    endDate: Joi.date().iso().optional(),
+    userId: Joi.string().optional()
   }),
 
   // Validation pour le nettoyage des queues
   cleanQueues: Joi.object({
-    olderThan: Joi.number().integer().min(1).max(168).default(24), // en heures, max 1 semaine
+    olderThan: Joi.number().integer().min(1).max(168).default(24),
     status: Joi.string().valid('completed', 'failed', 'all').default('completed'),
     limit: Joi.number().integer().min(1).max(10000).default(1000)
   })
@@ -435,11 +502,20 @@ function validateParams(schema) {
 
 /**
  * 📄 MIDDLEWARE VALIDATION BODY
- * 
+ *
  * @param {Object} schema - Schéma Joi de validation
  */
 function validateBody(schema) {
   return validate(schema, 'body');
+}
+
+/**
+ * 🔍 MIDDLEWARE VALIDATION QUERY
+ *
+ * @param {Object} schema - Schéma Joi de validation
+ */
+function validateQuery(schema) {
+  return validate(schema, 'query');
 }
 
 /**
@@ -484,6 +560,7 @@ module.exports = {
   validate,
   validateParams,
   validateBody,
+  validateQuery,
   validateEmail,
   validatePhoneNumber,
   schemas

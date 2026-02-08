@@ -11,7 +11,7 @@
 const express = require('express');
 const router = express.Router();
 const notificationsController = require('../controllers/notifications.controller');
-const { validateBody, validateParams, schemas } = require('../../middleware/validation');
+const { validateBody, validateParams, validateQuery, schemas } = require('../../middleware/validation');
 
 // ========================================
 // 📧 ROUTES EMAILS
@@ -319,7 +319,7 @@ router.post('/templates/import',
  * Récupère l'historique des notifications
  */
 router.get('/history',
-  validateBody(schemas.getHistory),
+  validateQuery(schemas.getHistory),
   notificationsController.getNotificationHistory
 );
 
@@ -339,7 +339,7 @@ router.post('/:notificationId/retry',
  * Récupère les statistiques des notifications
  */
 router.get('/statistics',
-  validateBody(schemas.getStatistics),
+  validateQuery(schemas.getStatistics),
   notificationsController.getNotificationStatistics
 );
 
