@@ -190,8 +190,11 @@ const schemas = {
 
   // Validation pour la création de notification in-app
   createInAppNotification: Joi.object({
-    userId: Joi.string().uuid().required().messages({
-      'string.uuid': 'L\'ID utilisateur doit être un UUID valide',
+    userId: Joi.alternatives().try(
+      Joi.string().uuid(),
+      Joi.number().integer().positive()
+    ).required().messages({
+      'alternatives.match': 'L\'ID utilisateur doit être un UUID valide ou un nombre entier positif',
       'any.required': 'L\'ID utilisateur est requis'
     }),
     type: Joi.string().valid('info', 'success', 'warning', 'error', 'event', 'payment', 'system').required().messages({
@@ -259,7 +262,11 @@ const schemas = {
 
   // Validation pour le désabonnement
   unsubscribeUser: Joi.object({
-    userId: Joi.string().uuid().required().messages({
+    userId: Joi.alternatives().try(
+      Joi.string().uuid(),
+      Joi.number().integer().positive()
+    ).required().messages({
+      'alternatives.match': 'L\'ID utilisateur doit être un UUID valide ou un nombre entier positif',
       'any.required': 'L\'ID utilisateur est requis'
     }),
     token: Joi.string().optional()
@@ -318,8 +325,11 @@ const schemas = {
       })
     }),
     userId: Joi.object({
-      userId: Joi.string().uuid().required().messages({
-        'string.uuid': 'L\'ID utilisateur doit être un UUID valide',
+      userId: Joi.alternatives().try(
+        Joi.string().uuid(),
+        Joi.number().integer().positive()
+      ).required().messages({
+        'alternatives.match': 'L\'ID utilisateur doit être un UUID valide ou un nombre entier positif',
         'any.required': 'L\'ID utilisateur est requis'
       })
     }),
