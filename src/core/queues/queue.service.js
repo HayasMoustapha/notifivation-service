@@ -41,8 +41,8 @@ class QueueService {
         }
       }));
 
-      // Queue pour les SMS
-      this.queues.set('sms', new Queue('sms notifications', {
+      // Queue pour les push notifications
+      this.queues.set('push', new Queue('push notifications', {
         redis: {
           port: process.env.REDIS_PORT || 6379,
           host: process.env.REDIS_HOST || 'localhost',
@@ -51,7 +51,7 @@ class QueueService {
         },
         defaultJobOptions: {
           ...this.jobOptions,
-          concurrency: parseInt(process.env.QUEUE_CONCURRENCY_SMS) || 3
+          concurrency: parseInt(process.env.QUEUE_CONCURRENCY_PUSH) || 3
         }
       }));
 
@@ -99,6 +99,14 @@ class QueueService {
     if (smsQueue) {
       smsQueue.process(async (job) => {
         return await this.processSMSJob(job);
+      });
+    }
+
+    // Worker pour les push notifications
+    const pushQueue = this.queues.get('push');
+    if (pushQueue) {
+      pushQueue.process(async (job) => {
+        return await this.processPushJob(job);
       });
     }
 
@@ -236,6 +244,51 @@ class QueueService {
   }
 
   /**
+   * Ajoute un job push à la queue
+   * @param {Object} jobData - Données du job
+   * @returns {Promise<Object>} Job créé
+   */
+  async addPushJob(jobData) {
+    try {
+      const jobId = this.generateJobId();
+      const job = {
+        id: jobId,
+        ...jobData,
+        createdAt: new Date().toISOString()
+      };
+
+      const queue = this.queues.get('push');
+      if (!queue) {
+        throw new Error('Push queue not available');
+      }
+
+      const result = await queue.add('push', job, {
+        jobId,
+        delay: jobData.delay || 0,
+        attempts: jobData.attempts || this.jobOptions.attempts
+      });
+
+      logger.info('Push job added to queue', {
+        jobId,
+        type: jobData.type,
+        token: jobData.token?.substring(0, 10) + '...'
+      });
+
+      return {
+        success: true,
+        jobId,
+        job: result
+      };
+    } catch (error) {
+      logger.error('Failed to add push job to queue', {
+        error: error.message
+      });
+      
+      throw new Error(`Échec d'ajout du job push: ${error.message}`);
+    }
+  }
+
+  /**
    * Ajoute un job de traitement en lot
    * @param {Object} jobData - Données du job
    * @returns {Promise<Object>} Job créé
@@ -334,40 +387,28 @@ class QueueService {
   }
 
   /**
-   * Traite un job SMS
+   * Traite un job push
    * @param {Object} job - Job à traiter
    * @returns {Promise<Object>} Résultat du traitement
    */
-  async processSMSJob(job) {
+  async processPushJob(job) {
     try {
-      const { type, phoneNumber, template, data, options } = job.data;
+      const { type, token, template, data, options } = job.data;
       
-      // Importer le service SMS
-      const smsService = require('../sms/sms.service');
+      // Importer le service push
+      const pushService = require('../push/push.service');
       
       let result;
       
       switch (type) {
         case 'transactional':
-          result = await smsService.sendTransactionalSMS(phoneNumber, template, data, options);
+          result = await pushService.sendTransactionalPush(token, template, data, options);
           break;
-        case 'welcome':
-          result = await smsService.sendWelcomeSMS(phoneNumber, data, options);
-          break;
-        case 'password-reset':
-          result = await smsService.sendPasswordResetSMS(phoneNumber, data.resetCode, options);
-          break;
-        case 'event-confirmation':
-          result = await smsService.sendEventConfirmationSMS(phoneNumber, data.event, data.ticket, options);
-          break;
-        case 'event-reminder':
-          result = await smsService.sendEventReminderSMS(phoneNumber, data.event, options);
-          break;
-        case 'otp':
-          result = await smsService.sendOTPSMS(phoneNumber, data.otpCode, data.purpose, options);
+        case 'push-retry':
+          result = await pushService.sendTransactionalPush(token, template, data, options);
           break;
         default:
-          result = await smsService.sendTransactionalSMS(phoneNumber, template, data, options);
+          result = await pushService.sendTransactionalPush(token, template, data, options);
       }
       
       return {
@@ -379,7 +420,7 @@ class QueueService {
         processedAt: new Date().toISOString()
       };
     } catch (error) {
-      logger.error('Failed to process SMS job', {
+      logger.error('Failed to process push job', {
         jobId: job.id,
         type: job.data.type,
         error: error.message

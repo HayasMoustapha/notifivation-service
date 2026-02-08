@@ -297,7 +297,7 @@ class EmailService {
   }
 
   /**
-   * Envoie un email transactionnel
+   * Envoie un email transactionnel avec retry automatique
    * @param {string} to - Email du destinataire
    * @param {string} template - Template à utiliser
    * @param {Object} data - Données du template
@@ -319,12 +319,24 @@ class EmailService {
 
       const result = await this.sendEmailWithFallback(mailOptions, options);
 
-      logger.email('Transactional email sent', {
-        to,
-        template,
-        provider: result.provider,
-        messageId: result.messageId,
-        ip: options.ip
+      await notificationRepository.createNotification({
+        type: 'email',
+        status: result.success ? 'sent' : 'failed',
+        priority: 1,
+        subject: data?.subject || null,
+        templateName: template,
+        templateData: data || null,
+        recipientEmail: to,
+        recipientName: data?.name || data?.fullName || null,
+        provider: result.provider || (result.fallback ? 'fallback' : null),
+        providerResponse: result,
+        providerMessageId: result.messageId || null,
+        sentAt: result.success ? new Date().toISOString() : null,
+        failedAt: result.success ? null : new Date().toISOString(),
+        errorMessage: result.success ? null : (result.error || result.reason || result.details?.message || 'Email send failed'),
+        errorCode: result.success ? null : 'EMAIL_SEND_FAILED',
+        retryCount: 0,
+        maxRetries: 3
       });
 
       return result;
@@ -335,7 +347,73 @@ class EmailService {
         error: error.message,
         ip: options.ip
       });
-      
+
+      // Vérifier si l'erreur est retryable
+      const isRetryable = this.isRetryableError(error);
+
+      if (isRetryable) {
+        // Mettre en queue un job retry
+        try {
+          const queueService = require('../queues/queue.service');
+          const jobData = {
+            type: 'email-retry',
+            to,
+            template,
+            data,
+            options: {
+              ...options,
+              retryCount: (options.retryCount || 0) + 1
+            },
+            originalError: error.message
+          };
+
+          await queueService.addEmailJob(jobData);
+
+          logger.info('Retry job queued for failed email', {
+            to,
+            template,
+            retryCount: jobData.options.retryCount
+          });
+
+          // Persister la notification avec statut pending
+          await notificationRepository.createNotification({
+            type: 'email',
+            status: 'pending',
+            priority: 1,
+            subject: data?.subject || null,
+            templateName: template,
+            templateData: data || null,
+            recipientEmail: to,
+            recipientName: data?.name || data?.fullName || null,
+            provider: null,
+            providerResponse: null,
+            providerMessageId: null,
+            sentAt: null,
+            failedAt: new Date().toISOString(),
+            errorMessage: error.message,
+            errorCode: 'EMAIL_SEND_FAILED_RETRY_QUEUED',
+            retryCount: jobData.options.retryCount,
+            maxRetries: 3
+          });
+
+          return {
+            success: false,
+            retryQueued: true,
+            error: 'Email send failed, retry queued',
+            details: {
+              message: error.message,
+              retryCount: jobData.options.retryCount
+            }
+          };
+        } catch (queueError) {
+          logger.error('Failed to queue retry job', {
+            error: queueError.message,
+            to,
+            template
+          });
+        }
+      }
+
       return {
         success: false,
         error: 'Échec d\'envoi de l\'email transactionnel',
@@ -349,7 +427,7 @@ class EmailService {
   }
 
   /**
-   * Génère le contenu de l'email
+   * Génère le contenu d'un email avec template DB en priorité
    * @param {string} template - Nom du template
    * @param {Object} data - Données du template
    * @param {Object} options - Options
@@ -359,42 +437,56 @@ class EmailService {
     try {
       let html, text, subject;
 
-      // Utiliser le template natif si disponible
-      let templateContent = this.templates.get(template);
-      if (templateContent) {
-        try {
-          const compiledData = { ...data, ...options };
-          console.log(`[DEBUG] Rendering template ${template} with data:`, Object.keys(compiledData));
-          html = renderTemplateContent(templateContent, compiledData);
-          console.log(`[DEBUG] Template ${template} rendered successfully, HTML length:`, html.length);
-          text = this.htmlToText(html);
-          subject = data.subject || this.getDefaultSubject(template);
-        } catch (templateError) {
-          console.error(`[DEBUG] Template rendering failed for ${template}:`, templateError.message);
-          html = this.generateFallbackHTML(template, data, options);
-          text = this.htmlToText(html);
-          subject = data.subject || `Notification Event Planner - ${template}`;
-        }
+      // 1. Essayer de récupérer le template depuis la DB
+      const templatesService = require('../templates/templates.service');
+      const dbTemplate = await templatesService.getTemplateByName(template, 'email');
+
+      if (dbTemplate) {
+        // Utiliser le template DB
+        const rendered = await templatesService.renderTemplate(dbTemplate, data);
+        subject = rendered.subject;
+        html = rendered.htmlContent;
+        text = rendered.textContent;
+
+        console.log(`[DEBUG] Rendered template ${template} from DB (v${dbTemplate.version})`);
       } else {
-        if (this.templates.size === 0) {
-          await this.loadTemplates();
-          templateContent = this.templates.get(template);
-        }
-
+        // Fallback: template filesystem
+        let templateContent = this.templates.get(template);
         if (templateContent) {
-          const compiledData = { ...data, ...options };
-          html = renderTemplateContent(templateContent, compiledData);
-          text = this.htmlToText(html);
-          subject = data.subject || this.getDefaultSubject(template);
-          return { html, text, subject };
-        }
+          try {
+            const compiledData = { ...data, ...options };
+            console.log(`[DEBUG] Rendering template ${template} from filesystem with data:`, Object.keys(compiledData));
+            html = renderTemplateContent(templateContent, compiledData);
+            console.log(`[DEBUG] Template ${template} rendered successfully, HTML length:`, html.length);
+            text = this.htmlToText(html);
+            subject = data.subject || this.getDefaultSubject(template);
+          } catch (templateError) {
+            console.error(`[DEBUG] Template rendering failed for ${template}:`, templateError.message);
+            html = this.generateFallbackHTML(template, data, options);
+            text = this.htmlToText(html);
+            subject = data.subject || `Notification Event Planner - ${template}`;
+          }
+        } else {
+          if (this.templates.size === 0) {
+            await this.loadTemplates();
+            templateContent = this.templates.get(template);
+          }
 
-        console.log(`[DEBUG] Template ${template} not found, using default template`);
-        // Templates inline par défaut
-        const defaultTemplate = this.getDefaultTemplate(template);
-        html = renderTemplateContent(defaultTemplate.html, { ...data, ...options });
-        text = defaultTemplate.text || this.htmlToText(html);
-        subject = data.subject || defaultTemplate.subject;
+          if (templateContent) {
+            const compiledData = { ...data, ...options };
+            html = renderTemplateContent(templateContent, compiledData);
+            text = this.htmlToText(html);
+            subject = data.subject || this.getDefaultSubject(template);
+            return { html, text, subject };
+          }
+
+          console.log(`[DEBUG] Template ${template} not found in DB or filesystem, using default template`);
+          // Templates inline par défaut
+          const defaultTemplate = this.getDefaultTemplate(template);
+          html = renderTemplateContent(defaultTemplate.html, { ...data, ...options });
+          text = defaultTemplate.text || this.htmlToText(html);
+          subject = data.subject || defaultTemplate.subject;
+        }
       }
 
       return { html, text, subject };
@@ -405,7 +497,7 @@ class EmailService {
         error: error.message,
         dataKeys: Object.keys(data)
       });
-      
+
       return {
         success: false,
         error: 'Échec de génération du contenu',
@@ -578,15 +670,24 @@ class EmailService {
   }
 
   /**
-   * Convertit HTML en texte brut
-   * @param {string} html - Contenu HTML
-   * @returns {string} Texte brut
+   * Détermine si une erreur est retryable
+   * @param {Error} error - L'erreur à analyser
+   * @returns {boolean} True si l'erreur est retryable
    */
-  htmlToText(html) {
-    return html
-      .replace(/<[^>]*>/g, '') // Supprimer les balises HTML
-      .replace(/\s+/g, ' ') // Normaliser les espaces
-      .trim();
+  isRetryableError(error) {
+    const retryableErrors = [
+      'SMTP_CONNECTION_FAILED',
+      'SENDGRID_API_ERROR',
+      'EMAIL_SEND_FAILED',
+      'TEMPLATE_RENDER_FAILED',
+      'ECONNREFUSED',
+      'ETIMEDOUT',
+      'ENOTFOUND',
+      'ECONNRESET'
+    ];
+
+    const errorMessage = error.message || error.code || '';
+    return retryableErrors.some(retryableError => errorMessage.includes(retryableError));
   }
 
   /**

@@ -146,11 +146,193 @@ const schemas = {
     'object.missing': 'Au moins un tableau d\'emails ou de SMS est requis'
   }),
 
+  // Validation pour l'envoi de notification push
+  sendPush: Joi.object({
+    token: Joi.string().min(10).required().messages({
+      'string.min': 'Le token push doit contenir au moins 10 caractères',
+      'any.required': 'Le token push est requis'
+    }),
+    template: Joi.string().valid(
+      'event-reminder', 'ticket-confirmation', 'payment-success', 'custom'
+    ).required().messages({
+      'any.only': 'Le template push doit être l\'un des suivants: event-reminder, ticket-confirmation, payment-success, custom',
+      'any.required': 'Le template est requis'
+    }),
+    data: Joi.object().required().messages({
+      'any.required': 'Les données du template sont requises'
+    }),
+    options: Joi.object({
+      priority: Joi.string().valid('low', 'normal', 'high').optional(),
+      sound: Joi.string().optional(),
+      badge: Joi.number().integer().min(0).optional(),
+      ttl: Joi.number().integer().min(0).optional()
+    }).optional()
+  }),
+
+  // Validation pour l'envoi en lot de notifications push
+  sendBulkPush: Joi.object({
+    tokens: Joi.array().items(
+      Joi.string().min(10).required()
+    ).min(1).max(500).required().messages({
+      'array.min': 'Au moins un token push est requis',
+      'array.max': 'Maximum 500 tokens par requête'
+    }),
+    template: Joi.string().valid(
+      'event-reminder', 'ticket-confirmation', 'payment-success', 'custom'
+    ).required(),
+    data: Joi.object().required(),
+    options: Joi.object({
+      priority: Joi.string().valid('low', 'normal', 'high').optional(),
+      sound: Joi.string().optional(),
+      badge: Joi.number().integer().min(0).optional()
+    }).optional()
+  }),
+
+  // Validation pour la création de notification in-app
+  createInAppNotification: Joi.object({
+    userId: Joi.string().uuid().required().messages({
+      'string.uuid': 'L\'ID utilisateur doit être un UUID valide',
+      'any.required': 'L\'ID utilisateur est requis'
+    }),
+    type: Joi.string().valid('info', 'success', 'warning', 'error', 'event', 'payment', 'system').required().messages({
+      'any.only': 'Le type doit être l\'un des suivants: info, success, warning, error, event, payment, system',
+      'any.required': 'Le type est requis'
+    }),
+    title: Joi.string().min(1).max(255).required().messages({
+      'any.required': 'Le titre est requis'
+    }),
+    message: Joi.string().max(2000).optional(),
+    data: Joi.object().optional(),
+    category: Joi.string().max(50).optional(),
+    priority: Joi.string().valid('low', 'normal', 'high', 'urgent').optional(),
+    expiresAt: Joi.date().iso().optional(),
+    actionUrl: Joi.string().uri().max(500).optional(),
+    actionText: Joi.string().max(100).optional()
+  }),
+
+  // Validation pour marquer comme lu
+  markAsRead: Joi.object({
+    userId: Joi.string().uuid().optional()
+  }),
+
+  // Validation pour marquer tout comme lu
+  markAllAsRead: Joi.object({
+    type: Joi.string().valid('info', 'success', 'warning', 'error', 'event', 'payment', 'system').optional(),
+    category: Joi.string().max(50).optional()
+  }),
+
+  // Validation pour suppression de notification in-app
+  deleteInAppNotification: Joi.object({
+    userId: Joi.string().uuid().optional()
+  }),
+
+  // Validation pour mise à jour des préférences utilisateur
+  updateUserPreferences: Joi.object({
+    channels: Joi.object({
+      email: Joi.boolean().optional(),
+      sms: Joi.boolean().optional(),
+      push: Joi.boolean().optional(),
+      inApp: Joi.boolean().optional()
+    }).optional(),
+    eventTypes: Joi.object({
+      invitations: Joi.boolean().optional(),
+      reminders: Joi.boolean().optional(),
+      updates: Joi.boolean().optional(),
+      paymentConfirmations: Joi.boolean().optional(),
+      paymentFailures: Joi.boolean().optional(),
+      accountChanges: Joi.boolean().optional(),
+      marketingEmails: Joi.boolean().optional(),
+      systemAlerts: Joi.boolean().optional()
+    }).optional(),
+    timing: Joi.object({
+      reminderTiming: Joi.string().valid('1h', '6h', '12h', '24h', '48h', '1w').optional(),
+      quietHoursStart: Joi.string().pattern(/^\d{2}:\d{2}$/).optional(),
+      quietHoursEnd: Joi.string().pattern(/^\d{2}:\d{2}$/).optional(),
+      timezone: Joi.string().max(50).optional()
+    }).optional(),
+    contacts: Joi.object({
+      email: Joi.string().email().optional(),
+      phone: Joi.string().pattern(/^[+]?[\d\s-()]+$/).optional(),
+      pushTokens: Joi.array().items(Joi.string()).optional()
+    }).optional()
+  }),
+
+  // Validation pour le désabonnement
+  unsubscribeUser: Joi.object({
+    userId: Joi.string().uuid().required().messages({
+      'any.required': 'L\'ID utilisateur est requis'
+    }),
+    token: Joi.string().optional()
+  }),
+
+  // Validation pour la création de template
+  createTemplate: Joi.object({
+    name: Joi.string().min(1).max(100).required().messages({
+      'any.required': 'Le nom du template est requis'
+    }),
+    type: Joi.string().valid('email', 'sms').required().messages({
+      'any.required': 'Le type du template est requis'
+    }),
+    subject: Joi.string().max(255).optional(),
+    htmlContent: Joi.string().optional(),
+    textContent: Joi.string().optional(),
+    variables: Joi.object().optional(),
+    defaultData: Joi.object().optional(),
+    description: Joi.string().optional(),
+    category: Joi.string().max(50).optional()
+  }),
+
+  // Validation pour la mise à jour de template
+  updateTemplate: Joi.object({
+    name: Joi.string().min(1).max(100).optional(),
+    subject: Joi.string().max(255).optional(),
+    htmlContent: Joi.string().optional(),
+    textContent: Joi.string().optional(),
+    variables: Joi.object().optional(),
+    defaultData: Joi.object().optional(),
+    description: Joi.string().optional(),
+    category: Joi.string().max(50).optional(),
+    isActive: Joi.boolean().optional()
+  }).min(1),
+
+  // Validation pour l'aperçu de template
+  previewTemplate: Joi.object({
+    data: Joi.object().required().messages({
+      'any.required': 'Les données de prévisualisation sont requises'
+    }),
+    type: Joi.string().valid('email', 'sms').optional()
+  }),
+
+  // Validation pour l'import de templates
+  importTemplates: Joi.object({
+    templatesDir: Joi.string().optional(),
+    overwrite: Joi.boolean().default(false).optional()
+  }),
+
   // Schémas pour les paramètres de route
   params: {
-    notificationId: Joi.string().uuid().required().messages({
-      'string.uuid': 'L\'ID de notification doit être un UUID valide',
-      'any.required': 'L\'ID de notification est requis'
+    notificationId: Joi.object({
+      notificationId: Joi.string().uuid().required().messages({
+        'string.uuid': 'L\'ID de notification doit être un UUID valide',
+        'any.required': 'L\'ID de notification est requis'
+      })
+    }),
+    userId: Joi.object({
+      userId: Joi.string().uuid().required().messages({
+        'string.uuid': 'L\'ID utilisateur doit être un UUID valide',
+        'any.required': 'L\'ID utilisateur est requis'
+      })
+    }),
+    templateName: Joi.object({
+      name: Joi.string().min(1).max(100).required().messages({
+        'any.required': 'Le nom du template est requis'
+      })
+    }),
+    templateId: Joi.object({
+      templateId: Joi.string().uuid().required().messages({
+        'string.uuid': 'L\'ID du template doit être un UUID valide',
+        'any.required': 'L\'ID du template est requis'
+      })
     })
   },
 

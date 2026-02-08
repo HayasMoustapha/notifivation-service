@@ -2,7 +2,7 @@
  * Consommateur Redis pour le service de notification
  */
 
-const { Worker, createQueue } = require('../../shared/config/redis-config');
+const { Worker, createQueue } = require('../../../shared/config/redis-config');
 const nodemailer = require('nodemailer');
 const twilio = require('twilio');
 
@@ -277,16 +277,47 @@ function generateTicketEmailTemplate(ticket, templateData) {
   `;
 }
 
-function generateTicketSMSTemplate(ticket, templateData) {
+function generateCustomEmailTemplate(recipient, templateData) {
   return `
-🎫 Event Planner
-Billet pour: ${templateData.event_title}
-Date: ${new Date(templateData.event_date).toLocaleDateString('fr-FR')}
-Lieu: ${templateData.event_location}
-Code: ${ticket.ticket_code}
-Nom: ${ticket.guest_name}
-Présentez ce code à l'entrée.
-  `.trim();
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <title>${templateData.subject || 'Notification Event Planner'}</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4; }
+            .container { max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; }
+            .header { text-align: center; color: #333; margin-bottom: 30px; }
+            .content { margin-bottom: 30px; line-height: 1.6; }
+            .footer { text-align: center; color: #666; margin-top: 30px; font-size: 12px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📢 Notification Event Planner</h1>
+            </div>
+            
+            <div class="content">
+                <p>Bonjour ${recipient.name || recipient.firstName || 'Utilisateur'},</p>
+                <p>${templateData.message || templateData.description || 'Vous avez une nouvelle notification.'}</p>
+                
+                ${templateData.event_title ? `<p><strong>Événement:</strong> ${templateData.event_title}</p>` : ''}
+                ${templateData.event_date ? `<p><strong>Date:</strong> ${new Date(templateData.event_date).toLocaleDateString('fr-FR')}</p>` : ''}
+                ${templateData.event_location ? `<p><strong>Lieu:</strong> ${templateData.event_location}</p>` : ''}
+                ${templateData.ticket_code ? `<p><strong>Code du billet:</strong> ${templateData.ticket_code}</p>` : ''}
+                
+                ${templateData.callToAction ? `<p><a href="${templateData.callToAction.url}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">${templateData.callToAction.text}</a></p>` : ''}
+            </div>
+            
+            <div class="footer">
+                <p>Cet email a été généré automatiquement par Event Planner.</p>
+                <p>Si vous ne souhaitez plus recevoir ces notifications, vous pouvez les désactiver dans vos paramètres.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+  `;
 }
 
 async function emitNotificationResult(jobId, result) {
@@ -318,7 +349,46 @@ async function emitNotificationResult(jobId, result) {
 }
 
 async function sendCustomEmail(recipient, templateData) {
-  console.log(`[NOTIFICATION_CONSUMER] Email personnalisé pour ${recipient.email}`);
+  try {
+    const transporter = nodemailer.createTransporter(emailConfig);
+    
+    const htmlContent = generateCustomEmailTemplate(recipient, templateData);
+    
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || 'noreply@eventplanner.com',
+      to: recipient.email,
+      subject: templateData.subject || `Notification Event Planner`,
+      html: htmlContent
+    };
+    
+    await transporter.sendMail(mailOptions);
+    
+    console.log(`[NOTIFICATION_CONSUMER] Email personnalisé envoyé à ${recipient.email}`);
+    
+    return {
+      success: true,
+      messageId: `email-${Date.now()}`,
+      to: recipient.email
+    };
+    
+  } catch (error) {
+    console.error(`[NOTIFICATION_CONSUMER] Erreur envoi email personnalisé à ${recipient.email}:`, error.message);
+    
+    // En mode développement, simuler l'envoi
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[NOTIFICATION_CONSUMER] MODE DEV: Simulation email pour ${recipient.email}`);
+      console.log(`[NOTIFICATION_CONSUMER] Sujet: ${templateData.subject || 'Notification Event Planner'}`);
+      
+      return {
+        success: true,
+        messageId: `mock-email-${Date.now()}`,
+        to: recipient.email,
+        mock: true
+      };
+    }
+    
+    throw new Error(`Impossible d'envoyer l'email personnalisé: ${error.message}`);
+  }
 }
 
 async function sendCustomSMS(recipient, templateData) {

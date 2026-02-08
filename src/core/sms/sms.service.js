@@ -167,7 +167,7 @@ class SMSService {
   }
 
   /**
-   * Envoie un SMS transactionnel
+   * Envoie un SMS transactionnel avec retry automatique
    * @param {string} phoneNumber - Numéro de téléphone du destinataire
    * @param {string} template - Template à utiliser
    * @param {Object} data - Données du template
@@ -180,12 +180,22 @@ class SMSService {
       
       const result = await this.sendSMSWithFallback(phoneNumber, message, options);
 
-      logger.sms('Transactional SMS sent', {
-        phoneNumber: this.maskPhoneNumber(phoneNumber),
-        template,
-        provider: result.provider,
-        messageId: result.messageId,
-        ip: options.ip
+      await notificationRepository.createNotification({
+        type: 'sms',
+        status: result.success ? 'sent' : 'failed',
+        priority: 1,
+        templateName: template,
+        templateData: data || null,
+        recipientPhone: phoneNumber,
+        provider: result.provider || (result.fallback ? 'fallback' : null),
+        providerResponse: result,
+        providerMessageId: result.messageId || null,
+        sentAt: result.success ? new Date().toISOString() : null,
+        failedAt: result.success ? null : new Date().toISOString(),
+        errorMessage: result.success ? null : (result.error || result.reason || result.details?.message || 'SMS send failed'),
+        errorCode: result.success ? null : 'SMS_SEND_FAILED',
+        retryCount: 0,
+        maxRetries: 3
       });
 
       return result;
@@ -196,7 +206,71 @@ class SMSService {
         error: error.message,
         ip: options.ip
       });
-      
+
+      // Vérifier si l'erreur est retryable
+      const isRetryable = this.isRetryableError(error);
+
+      if (isRetryable) {
+        // Mettre en queue un job retry
+        try {
+          const queueService = require('../queues/queue.service');
+          const jobData = {
+            type: 'sms-retry',
+            phoneNumber,
+            template,
+            data,
+            options: {
+              ...options,
+              retryCount: (options.retryCount || 0) + 1
+            },
+            originalError: error.message
+          };
+
+          await queueService.addSMSJob(jobData);
+
+          logger.sms('Retry job queued for failed SMS', {
+            phoneNumber: this.maskPhoneNumber(phoneNumber),
+            template,
+            retryCount: jobData.options.retryCount
+          });
+
+          // Persister la notification avec statut pending
+          await notificationRepository.createNotification({
+            type: 'sms',
+            status: 'pending',
+            priority: 1,
+            templateName: template,
+            templateData: data || null,
+            recipientPhone: phoneNumber,
+            provider: null,
+            providerResponse: null,
+            providerMessageId: null,
+            sentAt: null,
+            failedAt: new Date().toISOString(),
+            errorMessage: error.message,
+            errorCode: 'SMS_SEND_FAILED_RETRY_QUEUED',
+            retryCount: jobData.options.retryCount,
+            maxRetries: 3
+          });
+
+          return {
+            success: false,
+            retryQueued: true,
+            error: 'SMS send failed, retry queued',
+            details: {
+              message: error.message,
+              retryCount: jobData.options.retryCount
+            }
+          };
+        } catch (queueError) {
+          logger.error('Failed to queue retry job', {
+            error: queueError.message,
+            phoneNumber: this.maskPhoneNumber(phoneNumber),
+            template
+          });
+        }
+      }
+
       return {
         success: false,
         error: 'Échec d\'envoi du SMS transactionnel',
@@ -259,45 +333,61 @@ class SMSService {
   }
 
   /**
-   * Génère le message SMS à partir d'un template
+   * Génère un message SMS avec template DB en priorité
    * @param {string} template - Nom du template
    * @param {Object} data - Données du template
    * @param {Object} options - Options
    * @returns {string} Message généré
    */
-  generateSMSMessage(template, data, options = {}) {
-    const templates = {
-      'welcome': `Bienvenue {{user.first_name}} ! Merci de vous être inscrit sur Event Planner. Votre compte est prêt.`,
-      
-      'password-reset': `Event Planner: Votre code de réinitialisation est {{resetCode}}. Valable {{expiresIn}}. Ne le partagez pas.`,
-      
-      'event-confirmation': `Event Planner: Confirmation! Vous êtes inscrit à {{event.title}} le {{event.eventDate}}. Lieu: {{event.location}}`,
-      
-      'event-reminder': `Event Planner: Rappel! {{event.title}} a lieu demain à {{event.time}}. Lieu: {{event.location}}`,
-      
-      'ticket-reminder': `Event Planner: N'oubliez pas votre événement {{event.title}} aujourd'hui à {{event.time}}!`,
-      
-      'event-cancelled': `Event Planner: L'événement {{event.title}} a été annulé. Contactez-nous pour plus d'informations.`,
-      
-      'payment-confirmation': `Event Planner: Paiement reçu pour {{event.title}}. Montant: {{payment.amount}}€. Merci!`,
-      
-      'otp': `Event Planner: Votre code de vérification est {{otpCode}}. Valable {{expiresIn}}.`
-    };
+  async generateSMSMessage(template, data, options = {}) {
+    try {
+      let message;
 
-    let message = templates[template] || `Event Planner: ${template}`;
-    
-    // Remplacer les variables
-    Object.keys(data).forEach(key => {
-      const regex = new RegExp(`{{${key}}}`, 'g');
-      message = message.replace(regex, data[key]);
-    });
+      // 1. Essayer de récupérer le template depuis la DB
+      const templatesService = require('../templates/templates.service');
+      const dbTemplate = await templatesService.getTemplateByName(template, 'sms');
 
-    // Limiter à 160 caractères (standard SMS)
-    if (message.length > 160) {
-      message = message.substring(0, 157) + '...';
+      if (dbTemplate) {
+        // Utiliser le template DB
+        const rendered = await templatesService.renderTemplate(dbTemplate, data);
+        message = rendered.textContent;
+      } else {
+        // Fallback: templates inline
+        const inlineTemplates = {
+          'welcome': `Bienvenue sur Event Planner {{user.firstName || user.name}}! Votre compte est maintenant actif.`,
+          'password-reset': `Event Planner: Code de réinitialisation: {{resetCode}}. Valable {{expiresIn}}.`,
+          'event-confirmation': `Event Planner: Confirmation pour "{{event.title}}". Date: {{event.date}}. Lieu: {{event.location}}. Code: {{ticket.code}}`,
+          'event-reminder': `Event Planner: Rappel! {{event.title}} a lieu demain à {{event.time}}. Lieu: {{event.location}}`,
+          'ticket-reminder': `Event Planner: N'oubliez pas votre événement {{event.title}} aujourd'hui à {{event.time}}!`,
+          'event-cancelled': `Event Planner: L'événement {{event.title}} a été annulé. Contactez-nous pour plus d'informations.`,
+          'payment-confirmation': `Event Planner: Paiement reçu pour {{event.title}}. Montant: {{payment.amount}}€. Merci!`,
+          'otp': `Event Planner: Votre code de vérification est {{otpCode}}. Valable {{expiresIn}}.`
+        };
+
+        message = inlineTemplates[template] || `Event Planner: ${template}`;
+
+        // Remplacer les variables
+        Object.keys(data).forEach(key => {
+          const regex = new RegExp(`{{${key}}}`, 'g');
+          message = message.replace(regex, data[key] || '');
+        });
+      }
+
+      // Limiter à 160 caractères (standard SMS)
+      if (message.length > 160) {
+        message = message.substring(0, 157) + '...';
+      }
+
+      return message;
+    } catch (error) {
+      logger.error('Failed to generate SMS message', {
+        template,
+        error: error.message
+      });
+
+      // Fallback minimal
+      return `Event Planner: Notification ${template}`;
     }
-
-    return message;
   }
 
   /**
@@ -498,6 +588,25 @@ class SMSService {
    */
   isReady() {
     return this.twilioConfigured || this.vonageConfigured;
+  }
+
+  /**
+   * Détermine si une erreur est retryable
+   * @param {Error} error - L'erreur à analyser
+   * @returns {boolean} True si l'erreur est retryable
+   */
+  isRetryableError(error) {
+    const retryableErrors = [
+      'TWILIO_API_ERROR',
+      'SMS_SEND_FAILED',
+      'ECONNREFUSED',
+      'ETIMEDOUT',
+      'ENOTFOUND',
+      'ECONNRESET'
+    ];
+
+    const errorMessage = error.message || error.code || '';
+    return retryableErrors.some(retryableError => errorMessage.includes(retryableError));
   }
 
   /**

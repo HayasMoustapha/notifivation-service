@@ -51,6 +51,9 @@ class DatabaseBootstrap {
       const startTime = Date.now();
       const actions = [];
 
+      // S'assurer que la base existe avant tout (évite les erreurs de connexion)
+      await this.ensureDatabaseExists();
+
       // Acquérir le verrou
       await this.acquireLock();
       lockAcquired = true;
