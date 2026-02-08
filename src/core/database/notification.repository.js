@@ -7,6 +7,41 @@ const { getDatabase } = require('../../config/database');
 const logger = require('../../utils/logger');
 
 /**
+ * Normalise un userId (integer ou UUID) vers le format UUID
+ * @param {string|number} userId - ID utilisateur (integer ou UUID)
+ * @returns {string|null} UUID formaté ou null si invalide
+ */
+function normalizeUserId(userId) {
+  // Vérifier que userId est une valeur valide (non null, non undefined, non vide)
+  if (userId === null || userId === undefined || userId === '') {
+    return null;
+  }
+
+  // Si c'est déjà un UUID valide (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (typeof userId === 'string' && uuidRegex.test(userId)) {
+    return userId.toLowerCase();
+  }
+
+  // Si c'est un integer, le convertir en UUID (format: 00000000-0000-0000-0000-{12 digits padded})
+  const numericId = parseInt(userId, 10);
+  if (!isNaN(numericId) && numericId > 0) {
+    const paddedId = numericId.toString().padStart(12, '0');
+    return `00000000-0000-0000-0000-${paddedId}`;
+  }
+
+  // Si c'est une chaîne numérique
+  if (typeof userId === 'string' && /^\d+$/.test(userId)) {
+    const paddedId = userId.padStart(12, '0');
+    return `00000000-0000-0000-0000-${paddedId}`;
+  }
+
+  // Fallback: retourner tel quel et laisser PostgreSQL gérer l'erreur
+  logger.warn('Unable to normalize userId, using as-is', { userId, type: typeof userId });
+  return String(userId);
+}
+
+/**
  * Crée une notification
  * @param {Object} payload - Données de la notification
  * @returns {Promise<Object>} Notification créée
@@ -27,17 +62,30 @@ async function createNotification(payload) {
       readAt = null
     } = payload;
 
+    // Normaliser le userId (integer ou UUID -> UUID)
+    const normalizedUserId = normalizeUserId(userId);
+
+    // Si userId n'est pas valide, ne pas créer la notification
+    if (!normalizedUserId) {
+      logger.warn('Skipping notification creation: userId is required', {
+        type,
+        channel,
+        userId
+      });
+      return null;
+    }
+
     const query = `
       INSERT INTO notifications (user_id, template_id, type, channel, subject, content, status, sent_at, read_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `;
 
-    const values = [userId, templateId, type, channel, subject, content, status, sentAt, readAt];
+    const values = [normalizedUserId, templateId, type, channel, subject, content, status, sentAt, readAt];
     const result = await db.query(query, values);
     return result.rows[0];
   } catch (error) {
-    logger.error('Failed to create notification', { error: error.message });
+    logger.error('Failed to create notification', { error: error.message, userId: payload.userId });
     throw error;
   }
 }
@@ -171,8 +219,11 @@ async function getNotificationHistory(filters = {}) {
       queryParams.push(channel);
     }
     if (userId) {
-      whereConditions.push(`n.user_id = $${paramIndex++}`);
-      queryParams.push(userId);
+      const normalizedId = normalizeUserId(userId);
+      if (normalizedId) {
+        whereConditions.push(`n.user_id = $${paramIndex++}`);
+        queryParams.push(normalizedId);
+      }
     }
     if (startDate) {
       whereConditions.push(`n.created_at >= $${paramIndex++}`);
@@ -247,8 +298,11 @@ async function getNotificationStatistics(filters = {}) {
       queryParams.push(endDate);
     }
     if (userId) {
-      whereConditions.push(`user_id = $${paramIndex++}`);
-      queryParams.push(userId);
+      const normalizedId = normalizeUserId(userId);
+      if (normalizedId) {
+        whereConditions.push(`user_id = $${paramIndex++}`);
+        queryParams.push(normalizedId);
+      }
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';

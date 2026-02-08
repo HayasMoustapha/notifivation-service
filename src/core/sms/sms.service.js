@@ -1,12 +1,44 @@
 const twilio = require('twilio');
 const { Vonage } = require('@vonage/server-sdk');
 const logger = require('../../utils/logger');
+const notificationRepository = require('../database/notification.repository');
 
 /**
  * Service d'envoi de SMS transactionnels
  * Utilise Twilio + Vonage fallback avec haute disponibilité
  */
 class SMSService {
+  /**
+   * Templates système (auth/payment) - pas de vérification de préférences, pas de userId requis
+   * Ces SMS sont critiques et doivent toujours être envoyés
+   */
+  static SYSTEM_TEMPLATES = [
+    'otp',
+    'security-alert',
+    'password-reset',
+    'payment-confirmation'
+  ];
+
+  /**
+   * Templates utilisateur (core) - vérification des préférences, userId requis
+   * Ces SMS concernent les invités/utilisateurs et respectent leurs préférences
+   */
+  static USER_TEMPLATES = [
+    'appointment-reminder',
+    'event-reminder',
+    'ticket-reminder',
+    'event-confirmation'
+  ];
+
+  /**
+   * Vérifie si un template est un SMS système (auth/payment)
+   * @param {string} template - Nom du template
+   * @returns {boolean} True si c'est un SMS système
+   */
+  isSystemTemplate(template) {
+    return SMSService.SYSTEM_TEMPLATES.includes(template);
+  }
+
   constructor() {
     this.twilioClient = null;
     this.vonageClient = null;
@@ -171,32 +203,102 @@ class SMSService {
    * @param {string} phoneNumber - Numéro de téléphone du destinataire
    * @param {string} template - Template à utiliser
    * @param {Object} data - Données du template
-   * @param {Object} options - Options additionnelles
+   * @param {Object} options - Options additionnelles (userId pour vérifier les préférences)
    * @returns {Promise<Object>} Résultat de l'envoi
    */
   async sendTransactionalSMS(phoneNumber, template, data, options = {}) {
     try {
-      const message = this.generateSMSMessage(template, data, options);
-      
+      const isSystemSMS = this.isSystemTemplate(template);
+
+      // Pour les SMS utilisateur (non-système), vérifier les préférences si userId fourni
+      if (!isSystemSMS && options.userId) {
+        try {
+          const preferencesService = require('../preferences/preferences.service');
+          const preferenceCheck = await preferencesService.shouldSendNotification(options.userId, 'sms');
+
+          if (!preferenceCheck.shouldSend) {
+            logger.sms('SMS skipped due to user preferences', {
+              phoneNumber: this.maskPhoneNumber(phoneNumber),
+              template,
+              userId: options.userId,
+              reason: preferenceCheck.reason
+            });
+
+            return {
+              success: true,
+              skipped: true,
+              reason: 'user_preferences',
+              details: {
+                userId: options.userId,
+                channel: 'sms',
+                preferenceReason: preferenceCheck.reason
+              }
+            };
+          }
+
+          logger.sms('SMS allowed by user preferences', {
+            phoneNumber: this.maskPhoneNumber(phoneNumber),
+            template,
+            userId: options.userId,
+            reason: preferenceCheck.reason
+          });
+        } catch (prefError) {
+          // En cas d'erreur de vérification des préférences pour SMS utilisateur, on skip
+          logger.warn('Failed to check SMS preferences, skipping by default', {
+            phoneNumber: this.maskPhoneNumber(phoneNumber),
+            template,
+            userId: options.userId,
+            error: prefError.message
+          });
+
+          return {
+            success: true,
+            skipped: true,
+            reason: 'preference_check_failed',
+            details: {
+              userId: options.userId,
+              channel: 'sms',
+              error: prefError.message
+            }
+          };
+        }
+      }
+
+      const message = await this.generateSMSMessage(template, data, options);
+
       const result = await this.sendSMSWithFallback(phoneNumber, message, options);
 
-      await notificationRepository.createNotification({
-        type: 'sms',
-        status: result.success ? 'sent' : 'failed',
-        priority: 1,
-        templateName: template,
-        templateData: data || null,
-        recipientPhone: phoneNumber,
-        provider: result.provider || (result.fallback ? 'fallback' : null),
-        providerResponse: result,
-        providerMessageId: result.messageId || null,
-        sentAt: result.success ? new Date().toISOString() : null,
-        failedAt: result.success ? null : new Date().toISOString(),
-        errorMessage: result.success ? null : (result.error || result.reason || result.details?.message || 'SMS send failed'),
-        errorCode: result.success ? null : 'SMS_SEND_FAILED',
-        retryCount: 0,
-        maxRetries: 3
-      });
+      // Enregistrer la notification seulement pour les SMS utilisateur (non-système) avec userId
+      if (!isSystemSMS && options.userId) {
+        try {
+          const notification = await notificationRepository.createNotification({
+            userId: options.userId,
+            type: template,
+            channel: 'sms',
+            subject: null,
+            content: `SMS envoyé à ${this.maskPhoneNumber(phoneNumber)}`,
+            status: result.success ? 'sent' : 'failed',
+            sentAt: result.success ? new Date().toISOString() : null
+          });
+
+          // Créer un log avec les détails du provider
+          if (notification && notification.id) {
+            await notificationRepository.createNotificationLog({
+              notificationId: notification.id,
+              provider: result.provider || 'unknown',
+              response: result,
+              errorMessage: result.success ? null : (result.error || result.details?.message || null)
+            });
+          }
+        } catch (dbError) {
+          // Ne pas faire échouer l'envoi si l'enregistrement en DB échoue
+          logger.warn('Failed to record SMS notification in database', {
+            phoneNumber: this.maskPhoneNumber(phoneNumber),
+            template,
+            error: dbError.message
+          });
+        }
+      }
 
       return result;
     } catch (error) {
@@ -234,24 +336,35 @@ class SMSService {
             retryCount: jobData.options.retryCount
           });
 
-          // Persister la notification avec statut pending
-          await notificationRepository.createNotification({
-            type: 'sms',
-            status: 'pending',
-            priority: 1,
-            templateName: template,
-            templateData: data || null,
-            recipientPhone: phoneNumber,
-            provider: null,
-            providerResponse: null,
-            providerMessageId: null,
-            sentAt: null,
-            failedAt: new Date().toISOString(),
-            errorMessage: error.message,
-            errorCode: 'SMS_SEND_FAILED_RETRY_QUEUED',
-            retryCount: jobData.options.retryCount,
-            maxRetries: 3
-          });
+          // Persister la notification avec statut pending (seulement pour SMS utilisateur avec userId)
+          if (!this.isSystemTemplate(template) && options.userId) {
+            try {
+              const notification = await notificationRepository.createNotification({
+                userId: options.userId,
+                type: template,
+                channel: 'sms',
+                subject: null,
+                content: `SMS en attente de retry pour ${this.maskPhoneNumber(phoneNumber)}`,
+                status: 'pending',
+                sentAt: null
+              });
+
+              if (notification && notification.id) {
+                await notificationRepository.createNotificationLog({
+                  notificationId: notification.id,
+                  provider: 'queue',
+                  response: { retryQueued: true, retryCount: jobData.options.retryCount },
+                  errorMessage: error.message
+                });
+              }
+            } catch (dbError) {
+              logger.warn('Failed to record pending SMS notification in database', {
+                phoneNumber: this.maskPhoneNumber(phoneNumber),
+                template,
+                error: dbError.message
+              });
+            }
+          }
 
           return {
             success: false,

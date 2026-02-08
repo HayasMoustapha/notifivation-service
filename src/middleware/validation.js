@@ -19,7 +19,7 @@ const schemas = {
   // ========================================
 
   // Validation pour l'envoi d'email
-  // Controller: const { to, template, data, options } = req.body
+  // Controller: const { to, template, data, options, userId } = req.body
   sendEmail: Joi.object({
     to: Joi.string().email().required().messages({
       'string.email': 'L\'email du destinataire doit être valide',
@@ -61,7 +61,14 @@ const schemas = {
     options: Joi.object({
       fromName: Joi.string().max(100).optional(),
       priority: Joi.string().valid('low', 'normal', 'high').optional()
-    }).optional()
+    }).optional(),
+    // userId optionnel pour vérifier les préférences de notification
+    userId: Joi.alternatives().try(
+      Joi.string().uuid(),
+      Joi.number().integer().positive()
+    ).optional().messages({
+      'alternatives.match': 'L\'ID utilisateur doit être un UUID valide ou un nombre entier positif'
+    })
   }),
 
   // ========================================
@@ -69,8 +76,8 @@ const schemas = {
   // ========================================
 
   // Validation pour l'envoi de SMS
-  // Controller sendSMS: const { to, template, data, options } = req.body
-  // Controller queueSMS: const { to, template, data, options } = req.body
+  // Controller sendSMS: const { to, template, data, options, userId } = req.body
+  // Controller queueSMS: const { to, template, data, options, userId } = req.body
   sendSMS: Joi.object({
     to: Joi.string().pattern(/^[+]?[\d\s-()]+$/).required().messages({
       'string.pattern.base': 'Le numéro de téléphone doit être valide',
@@ -87,6 +94,13 @@ const schemas = {
     }),
     data: Joi.object().required().messages({
       'any.required': 'Les données du template sont requises'
+    }),
+    // userId optionnel pour vérifier les préférences de notification
+    userId: Joi.alternatives().try(
+      Joi.string().uuid(),
+      Joi.number().integer().positive()
+    ).optional().messages({
+      'alternatives.match': 'L\'ID utilisateur doit être un UUID valide ou un nombre entier positif'
     })
   }),
 

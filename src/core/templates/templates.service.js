@@ -271,7 +271,7 @@ class NotificationTemplatesService {
    * Rend un template avec des données
    * @param {Object} template - Template DB
    * @param {Object} data - Données à injecter
-   * @returns {Promise<Object>} Contenu rendu
+   * @returns {Promise<Object>} Contenu rendu avec htmlContent et textContent
    */
   async renderTemplate(template, data = {}) {
     try {
@@ -285,9 +285,17 @@ class NotificationTemplatesService {
         body = body.replace(regex, value || '');
       }
 
+      // Pour les emails: body est traité comme HTML, on génère aussi une version texte
+      // Pour les SMS: body est du texte brut
+      const isEmail = template.channel === 'email';
+      const htmlContent = isEmail ? body : null;
+      const textContent = isEmail ? this.htmlToText(body) : body;
+
       return {
         subject,
-        body,
+        body, // Maintenu pour compatibilité
+        htmlContent,
+        textContent,
         templateName: template.name,
         channel: template.channel
       };
@@ -298,6 +306,27 @@ class NotificationTemplatesService {
       });
       throw error;
     }
+  }
+
+  /**
+   * Convertit du HTML en texte brut
+   * @param {string} html - Contenu HTML
+   * @returns {string} Texte brut
+   */
+  htmlToText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   /**

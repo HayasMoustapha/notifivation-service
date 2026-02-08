@@ -31,30 +31,17 @@ class NotificationsController {
 
   async sendEmail(req, res) {
     try {
-      const { to, template, data, options = {} } = req.body;
+      const { to, template, data, options = {}, userId } = req.body;
 
+      // Passer le userId au service d'email pour la gestion des préférences et notifications
       const result = await emailService.sendTransactionalEmail(to, template, data, {
         ...options,
+        userId: userId || data?.userId || null,
         ip: req.ip
       });
 
-      // Persister dans notifications + notification_logs
-      const notification = await notificationRepository.createNotification({
-        userId: data?.userId || null,
-        type: template,
-        channel: 'email',
-        subject: data?.subject || null,
-        content: to,
-        status: result.success ? 'sent' : 'failed',
-        sentAt: result.success ? new Date().toISOString() : null
-      });
-
-      await notificationRepository.createNotificationLog({
-        notificationId: notification.id,
-        provider: result.provider || 'sendgrid',
-        response: result,
-        errorMessage: result.success ? null : (result.error || 'Email send failed')
-      });
+      // Note: La création de notification est gérée par le service d'email
+      // pour les templates utilisateur (non-système) avec userId valide
 
       return res.status(201).json(notificationResultResponse(result));
     } catch (error) {
@@ -104,8 +91,9 @@ class NotificationsController {
 
   async sendSMS(req, res) {
     try {
-      const { to, template, data, options = {} } = req.body;
+      const { to, template, data, options = {}, userId } = req.body;
 
+      // En développement, simuler l'envoi
       if (process.env.NODE_ENV === 'development') {
         const mockResult = {
           success: true,
@@ -116,44 +104,18 @@ class NotificationsController {
           template
         };
 
-        const notification = await notificationRepository.createNotification({
-          userId: data?.userId || null,
-          type: template,
-          channel: 'sms',
-          content: to,
-          status: 'sent',
-          sentAt: mockResult.sentAt
-        });
-
-        await notificationRepository.createNotificationLog({
-          notificationId: notification.id,
-          provider: 'mock',
-          response: mockResult
-        });
-
         return res.status(201).json(notificationResultResponse(mockResult));
       }
 
+      // Passer le userId au service SMS pour la gestion des préférences et notifications
       const result = await smsService.sendTransactionalSMS(to, template, data, {
         ...options,
+        userId: userId || data?.userId || null,
         ip: req.ip
       });
 
-      const notification = await notificationRepository.createNotification({
-        userId: data?.userId || null,
-        type: template,
-        channel: 'sms',
-        content: to,
-        status: result.success ? 'sent' : 'failed',
-        sentAt: result.success ? new Date().toISOString() : null
-      });
-
-      await notificationRepository.createNotificationLog({
-        notificationId: notification.id,
-        provider: result.provider || 'twilio',
-        response: result,
-        errorMessage: result.success ? null : (result.error || 'SMS send failed')
-      });
+      // Note: La création de notification est gérée par le service SMS
+      // pour les templates utilisateur (non-système) avec userId valide
 
       return res.status(201).json(notificationResultResponse(result));
     } catch (error) {

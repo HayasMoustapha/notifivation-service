@@ -6,6 +6,41 @@
 const { getDatabase } = require('../../config/database');
 const logger = require('../../utils/logger');
 
+/**
+ * Normalise un userId (integer ou UUID) vers le format UUID
+ * @param {string|number} userId - ID utilisateur (integer ou UUID)
+ * @returns {string|null} UUID formaté ou null si invalide
+ */
+function normalizeUserId(userId) {
+  // Vérifier que userId est une valeur valide (non null, non undefined, non vide)
+  if (userId === null || userId === undefined || userId === '') {
+    return null;
+  }
+
+  // Si c'est déjà un UUID valide (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (typeof userId === 'string' && uuidRegex.test(userId)) {
+    return userId.toLowerCase();
+  }
+
+  // Si c'est un integer, le convertir en UUID (format: 00000000-0000-0000-0000-{12 digits padded})
+  const numericId = parseInt(userId, 10);
+  if (!isNaN(numericId) && numericId > 0) {
+    const paddedId = numericId.toString().padStart(12, '0');
+    return `00000000-0000-0000-0000-${paddedId}`;
+  }
+
+  // Si c'est une chaîne numérique
+  if (typeof userId === 'string' && /^\d+$/.test(userId)) {
+    const paddedId = userId.padStart(12, '0');
+    return `00000000-0000-0000-0000-${paddedId}`;
+  }
+
+  // Fallback: retourner tel quel et laisser PostgreSQL gérer l'erreur
+  logger.warn('Unable to normalize userId, using as-is', { userId, type: typeof userId });
+  return String(userId);
+}
+
 class UserPreferencesService {
   constructor() {
     this.db = getDatabase();
@@ -14,11 +49,18 @@ class UserPreferencesService {
 
   /**
    * Récupère les préférences d'un utilisateur
-   * @param {string} userId - ID de l'utilisateur
+   * @param {string|number} userId - ID de l'utilisateur (integer ou UUID)
    * @returns {Promise<Object|null>} Préférences ou null
    */
   async getUserPreferences(userId) {
     try {
+      const normalizedId = normalizeUserId(userId);
+
+      // Si userId n'est pas valide, retourner null
+      if (!normalizedId) {
+        return null;
+      }
+
       const query = `
         SELECT id, user_id, channel, is_enabled, created_at, updated_at
         FROM notification_preferences
@@ -26,7 +68,7 @@ class UserPreferencesService {
         ORDER BY channel
       `;
 
-      const result = await this.db.query(query, [userId]);
+      const result = await this.db.query(query, [normalizedId]);
 
       if (result.rows.length === 0) {
         return null;
@@ -53,12 +95,20 @@ class UserPreferencesService {
 
   /**
    * Crée ou met à jour les préférences d'un utilisateur
-   * @param {string} userId - ID de l'utilisateur
+   * @param {string|number} userId - ID de l'utilisateur (integer ou UUID)
    * @param {Object} preferences - Nouvelles préférences { channel: is_enabled }
-   * @returns {Promise<Object>} Préférences mises à jour
+   * @returns {Promise<Object|null>} Préférences mises à jour ou null si userId invalide
    */
   async updateUserPreferences(userId, preferences) {
     try {
+      const normalizedId = normalizeUserId(userId);
+
+      // Si userId n'est pas valide, retourner null
+      if (!normalizedId) {
+        logger.warn('Cannot update preferences: userId is required', { userId });
+        return null;
+      }
+
       const { channels = {} } = preferences;
 
       const query = `
@@ -72,12 +122,12 @@ class UserPreferencesService {
       const results = [];
       for (const [channel, isEnabled] of Object.entries(channels)) {
         if (this.channels.includes(channel)) {
-          const result = await this.db.query(query, [userId, channel, isEnabled]);
+          const result = await this.db.query(query, [normalizedId, channel, isEnabled]);
           results.push(result.rows[0]);
         }
       }
 
-      logger.info('User preferences updated', { userId, channels });
+      logger.info('User preferences updated', { userId: normalizedId, channels });
       return await this.getUserPreferences(userId);
     } catch (error) {
       logger.error('Failed to update user preferences', {
@@ -90,17 +140,25 @@ class UserPreferencesService {
 
   /**
    * Supprime les préférences d'un utilisateur (rétablit les valeurs par défaut)
-   * @param {string} userId - ID de l'utilisateur
-   * @returns {Promise<boolean>} True si supprimé
+   * @param {string|number} userId - ID de l'utilisateur (integer ou UUID)
+   * @returns {Promise<boolean>} True si supprimé, false si userId invalide
    */
   async resetUserPreferences(userId) {
     try {
+      const normalizedId = normalizeUserId(userId);
+
+      // Si userId n'est pas valide, retourner false
+      if (!normalizedId) {
+        logger.warn('Cannot reset preferences: userId is required', { userId });
+        return false;
+      }
+
       const query = 'DELETE FROM notification_preferences WHERE user_id = $1';
-      const result = await this.db.query(query, [userId]);
+      const result = await this.db.query(query, [normalizedId]);
       const deleted = result.rowCount > 0;
 
       if (deleted) {
-        logger.info('User preferences reset to defaults', { userId });
+        logger.info('User preferences reset to defaults', { userId: normalizedId });
       }
 
       return deleted;
@@ -139,19 +197,29 @@ class UserPreferencesService {
 
   /**
    * Vérifie si un utilisateur souhaite recevoir une notification sur un canal
-   * @param {string} userId - ID de l'utilisateur
+   * @param {string|number} userId - ID de l'utilisateur (integer ou UUID)
    * @param {string} channel - Canal (email, sms, push, in_app)
    * @returns {Promise<Object>} Résultat de vérification
    */
   async shouldSendNotification(userId, channel) {
     try {
+      const normalizedId = normalizeUserId(userId);
+
+      // Si userId n'est pas valide, utiliser les préférences par défaut
+      if (!normalizedId) {
+        return {
+          shouldSend: channel !== 'sms',
+          reason: 'no_user_id'
+        };
+      }
+
       const query = `
         SELECT is_enabled
         FROM notification_preferences
         WHERE user_id = $1 AND channel = $2
       `;
 
-      const result = await this.db.query(query, [userId, channel]);
+      const result = await this.db.query(query, [normalizedId, channel]);
 
       if (result.rows.length === 0) {
         // Pas de préférences => envoyer par défaut sauf SMS

@@ -3,6 +3,7 @@ const sendgridMail = require('@sendgrid/mail');
 const fs = require('fs').promises;
 const path = require('path');
 const logger = require('../../utils/logger');
+const notificationRepository = require('../database/notification.repository');
 
 function getValueByPath(obj, pathStr) {
   if (!pathStr) return undefined;
@@ -297,16 +298,113 @@ class EmailService {
   }
 
   /**
+   * Templates système (auth/payment) - pas de vérification de préférences, pas de userId requis
+   * Ces emails sont critiques et doivent toujours être envoyés
+   */
+  static SYSTEM_TEMPLATES = [
+    // Auth service - emails système
+    'welcome',
+    'account-activated',
+    'account-suspended',
+    'email-verification',
+    'password-reset',
+    'password-changed',
+    'security-alert',
+    // Payment service - emails système
+    'payment-confirmation',
+    'payment-failed',
+    'refund-processed',
+    'fraud-detected',
+    // Autres emails système
+    'daily-scan-report',
+    'test-simple',
+    'refund-processed-simple',
+    'payment-failed-simple',
+    'fraud-detected-simple'
+  ];
+
+  /**
+   * Templates utilisateur (core) - vérification des préférences, userId requis
+   * Ces emails concernent les invités/utilisateurs et respectent leurs préférences
+   */
+  static USER_TEMPLATES = [
+    'event-invitation',
+    'event-confirmation',
+    'event-notification',
+    'event-cancelled',
+    'event-reminder',
+    'ticket-generated',
+    'ticket-purchased',
+    'ticket-reminder',
+    'appointment-reminder'
+  ];
+
+  /**
+   * Vérifie si un template est un email système (auth/payment)
+   * @param {string} template - Nom du template
+   * @returns {boolean} True si c'est un email système
+   */
+  isSystemTemplate(template) {
+    return EmailService.SYSTEM_TEMPLATES.includes(template);
+  }
+
+  /**
    * Envoie un email transactionnel avec retry automatique
    * @param {string} to - Email du destinataire
    * @param {string} template - Template à utiliser
    * @param {Object} data - Données du template
-   * @param {Object} options - Options additionnelles
+   * @param {Object} options - Options additionnelles (userId pour les emails utilisateur)
    * @returns {Promise<Object>} Résultat de l'envoi
    */
   async sendTransactionalEmail(to, template, data, options = {}) {
     try {
       await this.ensureInitialized();
+
+      const isSystemEmail = this.isSystemTemplate(template);
+
+      // Pour les emails utilisateur (non-système), vérifier les préférences si userId fourni
+      if (!isSystemEmail && options.userId) {
+        try {
+          const preferencesService = require('../preferences/preferences.service');
+          const preferenceCheck = await preferencesService.shouldSendNotification(options.userId, 'email');
+
+          if (!preferenceCheck.shouldSend) {
+            logger.info('Email skipped due to user preferences', {
+              to,
+              template,
+              userId: options.userId,
+              reason: preferenceCheck.reason
+            });
+
+            return {
+              success: true,
+              skipped: true,
+              reason: 'user_preferences',
+              details: {
+                userId: options.userId,
+                channel: 'email',
+                preferenceReason: preferenceCheck.reason
+              }
+            };
+          }
+
+          logger.info('Email allowed by user preferences', {
+            to,
+            template,
+            userId: options.userId,
+            reason: preferenceCheck.reason
+          });
+        } catch (prefError) {
+          // En cas d'erreur de vérification des préférences, on envoie par défaut
+          logger.warn('Failed to check email preferences, sending by default', {
+            to,
+            template,
+            userId: options.userId,
+            error: prefError.message
+          });
+        }
+      }
+
       const { subject, html, text } = await this.generateEmailContent(template, data, options);
       
       const mailOptions = {
@@ -319,25 +417,37 @@ class EmailService {
 
       const result = await this.sendEmailWithFallback(mailOptions, options);
 
-      await notificationRepository.createNotification({
-        type: 'email',
-        status: result.success ? 'sent' : 'failed',
-        priority: 1,
-        subject: data?.subject || null,
-        templateName: template,
-        templateData: data || null,
-        recipientEmail: to,
-        recipientName: data?.name || data?.fullName || null,
-        provider: result.provider || (result.fallback ? 'fallback' : null),
-        providerResponse: result,
-        providerMessageId: result.messageId || null,
-        sentAt: result.success ? new Date().toISOString() : null,
-        failedAt: result.success ? null : new Date().toISOString(),
-        errorMessage: result.success ? null : (result.error || result.reason || result.details?.message || 'Email send failed'),
-        errorCode: result.success ? null : 'EMAIL_SEND_FAILED',
-        retryCount: 0,
-        maxRetries: 3
-      });
+      // Enregistrer la notification seulement pour les emails utilisateur (non-système) avec userId
+      if (!isSystemEmail && options.userId) {
+        try {
+          const notification = await notificationRepository.createNotification({
+            userId: options.userId,
+            type: template,
+            channel: 'email',
+            subject: subject || data?.subject || null,
+            content: `Email envoyé à ${to}`,
+            status: result.success ? 'sent' : 'failed',
+            sentAt: result.success ? new Date().toISOString() : null
+          });
+
+          // Créer un log avec les détails du provider
+          if (notification && notification.id) {
+            await notificationRepository.createNotificationLog({
+              notificationId: notification.id,
+              provider: result.provider || 'unknown',
+              response: result,
+              errorMessage: result.success ? null : (result.error || result.details?.message || null)
+            });
+          }
+        } catch (dbError) {
+          // Ne pas faire échouer l'envoi si l'enregistrement en DB échoue
+          logger.warn('Failed to record email notification in database', {
+            to,
+            template,
+            error: dbError.message
+          });
+        }
+      }
 
       return result;
     } catch (error) {
@@ -375,26 +485,35 @@ class EmailService {
             retryCount: jobData.options.retryCount
           });
 
-          // Persister la notification avec statut pending
-          await notificationRepository.createNotification({
-            type: 'email',
-            status: 'pending',
-            priority: 1,
-            subject: data?.subject || null,
-            templateName: template,
-            templateData: data || null,
-            recipientEmail: to,
-            recipientName: data?.name || data?.fullName || null,
-            provider: null,
-            providerResponse: null,
-            providerMessageId: null,
-            sentAt: null,
-            failedAt: new Date().toISOString(),
-            errorMessage: error.message,
-            errorCode: 'EMAIL_SEND_FAILED_RETRY_QUEUED',
-            retryCount: jobData.options.retryCount,
-            maxRetries: 3
-          });
+          // Persister la notification avec statut pending (seulement pour emails utilisateur avec userId)
+          if (!this.isSystemTemplate(template) && options.userId) {
+            try {
+              const notification = await notificationRepository.createNotification({
+                userId: options.userId,
+                type: template,
+                channel: 'email',
+                subject: data?.subject || null,
+                content: `Email en attente de retry pour ${to}`,
+                status: 'pending',
+                sentAt: null
+              });
+
+              if (notification && notification.id) {
+                await notificationRepository.createNotificationLog({
+                  notificationId: notification.id,
+                  provider: 'queue',
+                  response: { retryQueued: true, retryCount: jobData.options.retryCount },
+                  errorMessage: error.message
+                });
+              }
+            } catch (dbError) {
+              logger.warn('Failed to record pending notification in database', {
+                to,
+                template,
+                error: dbError.message
+              });
+            }
+          }
 
           return {
             success: false,
@@ -688,6 +807,27 @@ class EmailService {
 
     const errorMessage = error.message || error.code || '';
     return retryableErrors.some(retryableError => errorMessage.includes(retryableError));
+  }
+
+  /**
+   * Convertit du HTML en texte brut
+   * @param {string} html - Contenu HTML
+   * @returns {string} Texte brut
+   */
+  htmlToText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   /**
