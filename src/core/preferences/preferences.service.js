@@ -12,33 +12,22 @@ const logger = require('../../utils/logger');
  * @returns {string|null} UUID formaté ou null si invalide
  */
 function normalizeUserId(userId) {
-  // Vérifier que userId est une valeur valide (non null, non undefined, non vide)
+  // Aligné sur le schéma actuel: user_id BIGINT
   if (userId === null || userId === undefined || userId === '') {
     return null;
   }
 
-  // Si c'est déjà un UUID valide (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (typeof userId === 'string' && uuidRegex.test(userId)) {
-    return userId.toLowerCase();
+  if (typeof userId === 'number' && Number.isInteger(userId) && userId > 0) {
+    return userId;
   }
 
-  // Si c'est un integer, le convertir en UUID (format: 00000000-0000-0000-0000-{12 digits padded})
-  const numericId = parseInt(userId, 10);
-  if (!isNaN(numericId) && numericId > 0) {
-    const paddedId = numericId.toString().padStart(12, '0');
-    return `00000000-0000-0000-0000-${paddedId}`;
-  }
-
-  // Si c'est une chaîne numérique
   if (typeof userId === 'string' && /^\d+$/.test(userId)) {
-    const paddedId = userId.padStart(12, '0');
-    return `00000000-0000-0000-0000-${paddedId}`;
+    const numericId = Number(userId);
+    return Number.isFinite(numericId) && numericId > 0 ? numericId : null;
   }
 
-  // Fallback: retourner tel quel et laisser PostgreSQL gérer l'erreur
-  logger.warn('Unable to normalize userId, using as-is', { userId, type: typeof userId });
-  return String(userId);
+  logger.warn('Invalid userId for BIGINT schema', { userId, type: typeof userId });
+  return null;
 }
 
 class UserPreferencesService {
