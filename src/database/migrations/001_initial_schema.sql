@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS notification_templates (
 -- ========================================
 CREATE TABLE IF NOT EXISTS notifications (
     id BIGSERIAL PRIMARY KEY,
-    user_id UUID NOT NULL,
+    user_id BIGINT NOT NULL,
     template_id BIGINT REFERENCES notification_templates(id) ON DELETE SET NULL,
     type VARCHAR(50) NOT NULL,
     channel VARCHAR(10) NOT NULL CHECK (channel IN ('email', 'sms', 'push', 'in_app')),
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 -- ========================================
 CREATE TABLE IF NOT EXISTS notification_preferences (
     id BIGSERIAL PRIMARY KEY,
-    user_id UUID NOT NULL,
+    user_id BIGINT NOT NULL,
     channel VARCHAR(10) NOT NULL CHECK (channel IN ('email', 'sms', 'push', 'in_app')),
     is_enabled BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

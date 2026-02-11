@@ -13,7 +13,7 @@ DROP TABLE IF EXISTS notification_stats;
 -- notifications
 -- ============================
 ALTER TABLE IF EXISTS notifications
-  ADD COLUMN IF NOT EXISTS user_id UUID,
+  ADD COLUMN IF NOT EXISTS user_id BIGINT,
   ADD COLUMN IF NOT EXISTS template_id BIGINT,
   ADD COLUMN IF NOT EXISTS channel VARCHAR(10),
   ADD COLUMN IF NOT EXISTS read_at TIMESTAMP WITH TIME ZONE;
@@ -152,4 +152,3 @@ BEGIN
       FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE;
   END IF;
 END$$;
-

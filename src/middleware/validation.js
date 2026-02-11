@@ -63,11 +63,10 @@ const schemas = {
       priority: Joi.string().valid('low', 'normal', 'high').optional()
     }).optional(),
     // userId optionnel pour vérifier les préférences de notification
-    userId: Joi.alternatives().try(
-      Joi.string().uuid(),
-      Joi.number().integer().positive()
-    ).optional().messages({
-      'alternatives.match': 'L\'ID utilisateur doit être un UUID valide ou un nombre entier positif'
+    userId: Joi.number().integer().positive().optional().messages({
+      'number.base': 'L\'ID utilisateur doit être un nombre entier positif',
+      'number.integer': 'L\'ID utilisateur doit être un nombre entier positif',
+      'number.positive': 'L\'ID utilisateur doit être un nombre entier positif'
     })
   }),
 
@@ -96,11 +95,10 @@ const schemas = {
       'any.required': 'Les données du template sont requises'
     }),
     // userId optionnel pour vérifier les préférences de notification
-    userId: Joi.alternatives().try(
-      Joi.string().uuid(),
-      Joi.number().integer().positive()
-    ).optional().messages({
-      'alternatives.match': 'L\'ID utilisateur doit être un UUID valide ou un nombre entier positif'
+    userId: Joi.number().integer().positive().optional().messages({
+      'number.base': 'L\'ID utilisateur doit être un nombre entier positif',
+      'number.integer': 'L\'ID utilisateur doit être un nombre entier positif',
+      'number.positive': 'L\'ID utilisateur doit être un nombre entier positif'
     })
   }),
 
@@ -240,13 +238,13 @@ const schemas = {
   // Validation pour la création de notification in-app
   // Controller: const { userId, type, title, message } = req.body
   // in-app.service: INSERT INTO notifications (user_id, template_id, type, channel, subject, content, ...)
-  // Schema: user_id UUID NOT NULL, type VARCHAR(50) NOT NULL, subject VARCHAR(255), content TEXT
+  // Schema: user_id BIGINT NOT NULL, type VARCHAR(50) NOT NULL, subject VARCHAR(255), content TEXT
   createInAppNotification: Joi.object({
     userId: Joi.alternatives().try(
       Joi.string().uuid(),
       Joi.number().integer().positive()
     ).required().messages({
-      'alternatives.match': 'L\'ID utilisateur doit être un UUID valide ou un nombre entier positif',
+      'alternatives.match': 'L\'ID utilisateur doit être un nombre entier positif',
       'any.required': 'L\'ID utilisateur est requis'
     }),
     type: Joi.string().valid('info', 'success', 'warning', 'error', 'event', 'payment', 'system').required().messages({
@@ -263,10 +261,7 @@ const schemas = {
   // Validation pour marquer comme lu
   // Controller: const { userId } = req.body
   markAsRead: Joi.object({
-    userId: Joi.alternatives().try(
-      Joi.string().uuid(),
-      Joi.number().integer().positive()
-    ).optional()
+    userId: Joi.number().integer().positive().optional()
   }),
 
   // Validation pour marquer tout comme lu
@@ -278,10 +273,7 @@ const schemas = {
   // Validation pour suppression de notification in-app
   // Controller: const { userId } = req.body
   deleteInAppNotification: Joi.object({
-    userId: Joi.alternatives().try(
-      Joi.string().uuid(),
-      Joi.number().integer().positive()
-    ).optional()
+    userId: Joi.number().integer().positive().optional()
   }),
 
   // ========================================
@@ -291,7 +283,7 @@ const schemas = {
   // Validation pour mise à jour des préférences utilisateur
   // Controller: const preferences = req.body -> preferencesService.updateUserPreferences(userId, preferences)
   // Service: const { channels = {} } = preferences; channels keys: 'email', 'sms', 'push', 'in_app'
-  // Schema: notification_preferences (user_id, channel CHECK IN ('email','sms','push','in_app'), is_enabled BOOLEAN)
+  // Schema: notification_preferences (user_id BIGINT, channel CHECK IN ('email','sms','push','in_app'), is_enabled BOOLEAN)
   updateUserPreferences: Joi.object({
     channels: Joi.object({
       email: Joi.boolean().optional(),
@@ -307,11 +299,10 @@ const schemas = {
   // Validation pour le désabonnement
   // Controller: const { userId } = req.body -> preferencesService.unsubscribeUser(userId)
   unsubscribeUser: Joi.object({
-    userId: Joi.alternatives().try(
-      Joi.string().uuid(),
-      Joi.number().integer().positive()
-    ).required().messages({
-      'alternatives.match': 'L\'ID utilisateur doit être un UUID valide ou un nombre entier positif',
+    userId: Joi.number().integer().positive().required().messages({
+      'number.base': 'L\'ID utilisateur doit être un nombre entier positif',
+      'number.integer': 'L\'ID utilisateur doit être un nombre entier positif',
+      'number.positive': 'L\'ID utilisateur doit être un nombre entier positif',
       'any.required': 'L\'ID utilisateur est requis'
     })
   }),
@@ -390,13 +381,13 @@ const schemas = {
         'any.required': 'L\'ID de notification est requis'
       })
     }),
-    // Schema: user_id UUID NOT NULL (peut aussi être integer selon contexte)
+    // Schema: user_id BIGINT NOT NULL
     userId: Joi.object({
       userId: Joi.alternatives().try(
         Joi.string().uuid(),
         Joi.number().integer().positive()
       ).required().messages({
-        'alternatives.match': 'L\'ID utilisateur doit être un UUID valide ou un nombre entier positif',
+        'alternatives.match': 'L\'ID utilisateur doit être un nombre entier positif',
         'any.required': 'L\'ID utilisateur est requis'
       })
     }),
