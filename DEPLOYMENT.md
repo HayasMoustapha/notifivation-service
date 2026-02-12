@@ -21,6 +21,7 @@
    - SMTP/SendGrid
    - SMS provider (Twilio/Vonage)
    - `JWT_SECRET`
+3. Tester l’envoi email/SMS en sandbox
 
 ---
 
@@ -45,4 +46,3 @@ npm run start
 ```
 GET http://localhost:3002/api/health
 ```
-
