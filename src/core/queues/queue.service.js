@@ -41,6 +41,20 @@ class QueueService {
         }
       }));
 
+      // Queue pour les SMS
+      this.queues.set('sms', new Queue('sms notifications', {
+        redis: {
+          port: process.env.REDIS_PORT || 6379,
+          host: process.env.REDIS_HOST || 'localhost',
+          password: process.env.REDIS_PASSWORD,
+          db: parseInt(process.env.QUEUE_REDIS_URL?.split('/')[3]) || 4
+        },
+        defaultJobOptions: {
+          ...this.jobOptions,
+          concurrency: parseInt(process.env.QUEUE_CONCURRENCY_SMS) || 5
+        }
+      }));
+
       // Queue pour les push notifications
       this.queues.set('push', new Queue('push notifications', {
         redis: {
