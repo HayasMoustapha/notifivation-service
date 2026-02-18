@@ -176,6 +176,11 @@ class NotificationServer {
       });
     });
 
+    // Documentation Swagger — http://localhost:3002/docs
+    const { specs: swaggerSpecs, swaggerUi, swaggerUiOptions } = require('./config/swagger');
+    this.app.use('/docs', swaggerUi.serve);
+    this.app.get('/docs', swaggerUi.setup(swaggerSpecs, swaggerUiOptions));
+
     // ❌ ROUTE 404 : Gestion des routes non trouvées (Express 5 syntax)
     this.app.use('/{*path}', (req, res) => {
       logger.warn(`Route not found: ${req.method} ${req.path}`, {
