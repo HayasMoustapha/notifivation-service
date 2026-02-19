@@ -65,7 +65,7 @@ class NotificationServer {
 
     // MIDDLEWARE CORS : Permet les requêtes depuis d'autres domaines
     this.app.use(cors({
-      origin: process.env.CORS_ORIGIN || 'http://localhost:3000', // Domaine autorisé
+      origin: [process.env.CORS_ORIGIN || 'http://localhost:3000', 'http://localhost:3099'],
       credentials: true, // Autorise les cookies et authentification
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Méthodes HTTP autorisées
       allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Webhook-Signature'] // En-têtes autorisés
