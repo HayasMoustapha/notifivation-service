@@ -33,6 +33,13 @@ class DatabaseBootstrap {
     this.migrationsPath = path.join(__dirname, '../../src/database/migrations');
     this.bootstrapPath = path.join(__dirname, '../../src/database/bootstrap');
     this.lockId = 12345;
+    this.requiredTables = [
+      'schema_migrations',
+      'notification_templates',
+      'notifications',
+      'notification_preferences',
+      'notification_logs'
+    ];
   }
 
   /**
@@ -42,17 +49,39 @@ class DatabaseBootstrap {
     let lockAcquired = false;
     
     try {
-      if (process.env.DB_AUTO_BOOTSTRAP !== 'true') {
-        console.log('⚠️  Bootstrap automatique désactivé (DB_AUTO_BOOTSTRAP != true)');
-        return { success: true, message: 'Bootstrap désactivé', actions: [] };
+      // S'assurer que la base existe avant tout (évite les erreurs de connexion)
+      await this.ensureDatabaseExists();
+
+      const autoBootstrapEnabled = process.env.DB_AUTO_BOOTSTRAP === 'true';
+      const initialSchemaStatus = await this.getSchemaStatus();
+
+      if (!autoBootstrapEnabled && initialSchemaStatus.ready) {
+        console.log('ℹ️  Bootstrap automatique désactivé, schéma déjà prêt');
+        return {
+          success: true,
+          message: 'Bootstrap désactivé, schéma déjà prêt',
+          actions: [],
+          schemaReady: true
+        };
+      }
+
+      if (!autoBootstrapEnabled && !initialSchemaStatus.ready) {
+        const missingTablesLabel = initialSchemaStatus.missingTables.join(', ');
+
+        if (process.env.NODE_ENV === 'production') {
+          throw new Error(
+            `Schéma notifications incomplet (${missingTablesLabel}) avec DB_AUTO_BOOTSTRAP=false`
+          );
+        }
+
+        console.log(
+          `⚠️  Schéma incomplet détecté (${missingTablesLabel}). Bootstrap forcé en ${process.env.NODE_ENV || 'development'}.`
+        );
       }
 
       console.log('🚀 Démarrage du bootstrap de la base de données...');
       const startTime = Date.now();
       const actions = [];
-
-      // S'assurer que la base existe avant tout (évite les erreurs de connexion)
-      await this.ensureDatabaseExists();
 
       // Acquérir le verrou
       await this.acquireLock();
@@ -66,6 +95,13 @@ class DatabaseBootstrap {
       const appliedMigrations = await this.applyMigrations();
       actions.push(...appliedMigrations);
 
+      const finalSchemaStatus = await this.getSchemaStatus();
+      if (!finalSchemaStatus.ready) {
+        throw new Error(
+          `Bootstrap terminé avec un schéma incomplet (${finalSchemaStatus.missingTables.join(', ')})`
+        );
+      }
+
       const duration = Date.now() - startTime;
       console.log(`✅ Bootstrap terminé en ${duration}ms`);
 
@@ -74,7 +110,8 @@ class DatabaseBootstrap {
         message: 'Bootstrap réussi',
         duration,
         actions,
-        migrationsApplied: appliedMigrations.length
+        migrationsApplied: appliedMigrations.length,
+        schemaReady: true
       };
 
     } catch (error) {
@@ -146,6 +183,39 @@ class DatabaseBootstrap {
       );
       await client.query(bootstrapSql);
       console.log('✅ Table schema_migrations vérifiée/créée');
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Vérifie si le schéma minimum requis est présent
+   * @returns {Promise<{ready: boolean, existingTables: string[], missingTables: string[]}>}
+   */
+  async getSchemaStatus() {
+    const client = await getConnection().connect();
+    try {
+      const result = await client.query(
+        `
+          SELECT table_name
+          FROM information_schema.tables
+          WHERE table_schema = 'public'
+            AND table_name = ANY($1::text[])
+        `,
+        [this.requiredTables]
+      );
+
+      const existingTables = result.rows.map(row => row.table_name);
+      const existingTablesSet = new Set(existingTables);
+      const missingTables = this.requiredTables.filter(
+        tableName => !existingTablesSet.has(tableName)
+      );
+
+      return {
+        ready: missingTables.length === 0,
+        existingTables,
+        missingTables
+      };
     } finally {
       client.release();
     }

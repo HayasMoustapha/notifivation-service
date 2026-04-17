@@ -6,6 +6,13 @@
 const { getDatabase } = require('../../config/database');
 const logger = require('../../utils/logger');
 
+const DEFAULT_NOTIFICATION_CHANNELS = {
+  email: true,
+  sms: false,
+  push: true,
+  in_app: true
+};
+
 /**
  * Normalise un userId (integer ou UUID) vers le format UUID
  * @param {string|number} userId - ID utilisateur (integer ou UUID)
@@ -60,7 +67,12 @@ class UserPreferencesService {
       const result = await this.db.query(query, [normalizedId]);
 
       if (result.rows.length === 0) {
-        return null;
+        return {
+          userId,
+          channels: { ...DEFAULT_NOTIFICATION_CHANNELS },
+          rows: [],
+          isDefault: true
+        };
       }
 
       const preferences = {};
@@ -213,7 +225,7 @@ class UserPreferencesService {
       if (result.rows.length === 0) {
         // Pas de préférences => envoyer par défaut sauf SMS
         return {
-          shouldSend: channel !== 'sms',
+          shouldSend: DEFAULT_NOTIFICATION_CHANNELS[channel] ?? true,
           reason: 'default_preferences'
         };
       }

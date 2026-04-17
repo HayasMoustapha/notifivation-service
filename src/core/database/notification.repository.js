@@ -9,42 +9,30 @@ const logger = require('../../utils/logger');
 /**
  * Normalise un userId (integer ou UUID) vers le format UUID
  * @param {string|number} userId - ID utilisateur (integer ou UUID)
- * @returns {string|null} UUID formaté ou null si invalide
+ * @returns {string|null} UUID formatÃ© ou null si invalide
  */
 function normalizeUserId(userId) {
-  // Vérifier que userId est une valeur valide (non null, non undefined, non vide)
   if (userId === null || userId === undefined || userId === '') {
     return null;
   }
 
-  // Si c'est déjà un UUID valide (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (typeof userId === 'string' && uuidRegex.test(userId)) {
-    return userId.toLowerCase();
+  if (typeof userId === 'number' && Number.isInteger(userId) && userId > 0) {
+    return userId;
   }
 
-  // Si c'est un integer, le convertir en UUID (format: 00000000-0000-0000-0000-{12 digits padded})
-  const numericId = parseInt(userId, 10);
-  if (!isNaN(numericId) && numericId > 0) {
-    const paddedId = numericId.toString().padStart(12, '0');
-    return `00000000-0000-0000-0000-${paddedId}`;
-  }
-
-  // Si c'est une chaîne numérique
   if (typeof userId === 'string' && /^\d+$/.test(userId)) {
-    const paddedId = userId.padStart(12, '0');
-    return `00000000-0000-0000-0000-${paddedId}`;
+    const numericId = Number(userId);
+    return Number.isFinite(numericId) && numericId > 0 ? numericId : null;
   }
 
-  // Fallback: retourner tel quel et laisser PostgreSQL gérer l'erreur
-  logger.warn('Unable to normalize userId, using as-is', { userId, type: typeof userId });
-  return String(userId);
+  logger.warn('Invalid userId for BIGINT schema', { userId, type: typeof userId });
+  return null;
 }
 
 /**
- * Crée une notification
- * @param {Object} payload - Données de la notification
- * @returns {Promise<Object>} Notification créée
+ * CrÃ©e une notification
+ * @param {Object} payload - DonnÃ©es de la notification
+ * @returns {Promise<Object>} Notification crÃ©Ã©e
  */
 async function createNotification(payload) {
   const db = getDatabase();
@@ -65,7 +53,7 @@ async function createNotification(payload) {
     // Normaliser le userId (integer ou UUID -> UUID)
     const normalizedUserId = normalizeUserId(userId);
 
-    // Si userId n'est pas valide, ne pas créer la notification
+    // Si userId n'est pas valide, ne pas crÃ©er la notification
     if (!normalizedUserId) {
       logger.warn('Skipping notification creation: userId is required', {
         type,
@@ -91,9 +79,9 @@ async function createNotification(payload) {
 }
 
 /**
- * Crée un log de notification
- * @param {Object} payload - Données du log
- * @returns {Promise<Object>} Log créé
+ * CrÃ©e un log de notification
+ * @param {Object} payload - DonnÃ©es du log
+ * @returns {Promise<Object>} Log crÃ©Ã©
  */
 async function createNotificationLog(payload) {
   const db = getDatabase();
@@ -117,7 +105,7 @@ async function createNotificationLog(payload) {
 }
 
 /**
- * Récupère une notification par son ID
+ * RÃ©cupÃ¨re une notification par son ID
  * @param {number} notificationId - ID de la notification
  * @returns {Promise<Object|null>} Notification ou null
  */
@@ -141,11 +129,11 @@ async function getNotificationById(notificationId) {
 }
 
 /**
- * Met à jour le statut d'une notification
+ * Met Ã  jour le statut d'une notification
  * @param {number} notificationId - ID de la notification
  * @param {string} status - Nouveau statut
- * @param {Object} extra - Champs supplémentaires (sentAt, readAt)
- * @returns {Promise<Object>} Notification mise à jour
+ * @param {Object} extra - Champs supplÃ©mentaires (sentAt, readAt)
+ * @returns {Promise<Object>} Notification mise Ã  jour
  */
 async function updateNotificationStatus(notificationId, status, extra = {}) {
   const db = getDatabase();
@@ -181,9 +169,9 @@ async function updateNotificationStatus(notificationId, status, extra = {}) {
 }
 
 /**
- * Récupère l'historique des notifications avec filtres
+ * RÃ©cupÃ¨re l'historique des notifications avec filtres
  * @param {Object} filters - Filtres de recherche
- * @returns {Promise<Object>} Notifications et métadonnées
+ * @returns {Promise<Object>} Notifications et mÃ©tadonnÃ©es
  */
 async function getNotificationHistory(filters = {}) {
   const db = getDatabase();
@@ -275,7 +263,7 @@ async function getNotificationHistory(filters = {}) {
 }
 
 /**
- * Récupère les statistiques des notifications
+ * RÃ©cupÃ¨re les statistiques des notifications
  * @param {Object} filters - Filtres
  * @returns {Promise<Object>} Statistiques
  */

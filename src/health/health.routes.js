@@ -3,6 +3,8 @@ const router = express.Router();
 const emailService = require('../core/email/email.service');
 const smsService = require('../core/sms/sms.service');
 const queueService = require('../core/queues/queue.service');
+const DatabaseBootstrap = require('../services/database-bootstrap.service');
+const { getDatabase } = require('../config/database');
 const logger = require('../utils/logger');
 
 /**
@@ -38,14 +40,19 @@ router.get('/', async (req, res) => {
 // GET /health/detailed - Health check détaillé
 router.get('/detailed', async (req, res) => {
   try {
-    const [emailHealth, smsHealth, queueStats] = await Promise.all([
+    const [emailHealth, smsHealth, queueStats, redisHealthy, databaseStatus] = await Promise.all([
       emailService.healthCheck(),
       smsService.healthCheck(),
-      queueService.getQueueStats()
+      queueService.getQueueStats(),
+      checkRedisConnection(),
+      checkDatabaseConnection()
     ]);
 
+    const dependenciesHealthy = redisHealthy && databaseStatus.healthy;
+    const serviceStatus = dependenciesHealthy ? 'healthy' : 'degraded';
+
     const detailedStatus = {
-      status: 'healthy',
+      status: serviceStatus,
       timestamp: new Date().toISOString(),
       service: 'notification',
       version: process.env.npm_package_version || '1.0.0',
@@ -60,8 +67,8 @@ router.get('/detailed', async (req, res) => {
         pid: process.pid
       },
       dependencies: {
-        redis: await checkRedisConnection(),
-        database: await checkDatabaseConnection()
+        redis: redisHealthy,
+        database: databaseStatus
       },
       services: {
         email: emailHealth,
@@ -69,7 +76,7 @@ router.get('/detailed', async (req, res) => {
         queues: queueStats.stats
       },
       overall: {
-        healthy: emailHealth.healthy || smsHealth.healthy,
+        healthy: dependenciesHealthy && (emailHealth.healthy || smsHealth.healthy),
         providers: {
           email: emailHealth.healthy,
           sms: smsHealth.healthy,
@@ -78,7 +85,7 @@ router.get('/detailed', async (req, res) => {
       }
     };
 
-    res.status(200).json(detailedStatus);
+    res.status(dependenciesHealthy ? 200 : 503).json(detailedStatus);
   } catch (error) {
     logger.error('Detailed health check failed', {
       error: error.message
@@ -106,14 +113,14 @@ router.get('/ready', async (req, res) => {
     ]);
     
     const notificationsReady = emailHealth.healthy || smsHealth.healthy;
-    const isReady = redisReady && databaseReady && notificationsReady;
+    const isReady = redisReady && databaseReady.healthy && notificationsReady;
     
     const status = {
       status: isReady ? 'ready' : 'not ready',
       timestamp: new Date().toISOString(),
       dependencies: {
         redis: redisReady,
-        database: databaseReady,
+        database: databaseReady.healthy,
         notifications: notificationsReady
       },
       providers: {
@@ -195,8 +202,10 @@ router.get('/components/:component', async (req, res) => {
         const dbStatus = await checkDatabaseConnection();
         result = {
           success: true,
-          healthy: dbStatus,
-          connection: dbStatus ? 'connected' : 'disconnected'
+          healthy: dbStatus.healthy,
+          connection: dbStatus.connected ? 'connected' : 'disconnected',
+          schemaReady: dbStatus.schemaReady,
+          missingTables: dbStatus.missingTables
         };
         break;
       default:
@@ -317,8 +326,11 @@ router.post('/test', async (req, res) => {
         });
     }
 
-    res.status(result.success || result ? 200 : 503).json({
-      success: result.success || result,
+    const testSucceeded =
+      typeof result === 'boolean' ? result : (result.success ?? result.healthy ?? false);
+
+    res.status(testSucceeded ? 200 : 503).json({
+      success: testSucceeded,
       component,
       testedAt: new Date().toISOString(),
       result
@@ -363,18 +375,28 @@ async function checkRedisConnection() {
  */
 async function checkDatabaseConnection() {
   try {
-    // Importer la configuration de la base de données
-    // const database = require('../config/database');
-    // await database.query('SELECT 1');
-    // return true;
-    
-    // Placeholder pour l'instant
-    return true;
+    await getDatabase().query('SELECT 1');
+    const schemaStatus = await DatabaseBootstrap.getSchemaStatus();
+
+    return {
+      success: true,
+      healthy: schemaStatus.ready,
+      connected: true,
+      schemaReady: schemaStatus.ready,
+      missingTables: schemaStatus.missingTables
+    };
   } catch (error) {
     logger.error('Database connection check failed', {
       error: error.message
     });
-    return false;
+    return {
+      success: false,
+      healthy: false,
+      connected: false,
+      schemaReady: false,
+      missingTables: [],
+      error: error.message
+    };
   }
 }
 
