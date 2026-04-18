@@ -95,6 +95,7 @@ class NotificationsController {
 
       // En développement, simuler l'envoi
       if (process.env.NODE_ENV === 'development') {
+        const resolvedUserId = userId || data?.userId || null;
         const mockResult = {
           success: true,
           messageId: `mock-sms-${Date.now()}`,
@@ -103,6 +104,36 @@ class NotificationsController {
           provider: 'mock',
           template
         };
+
+        if (!smsService.isSystemTemplate(template) && resolvedUserId) {
+          try {
+            const notification = await notificationRepository.createNotification({
+              userId: resolvedUserId,
+              type: template,
+              channel: 'sms',
+              subject: null,
+              content: `SMS envoyé à ${smsService.maskPhoneNumber(to)}`,
+              status: 'sent',
+              sentAt: mockResult.sentAt
+            });
+
+            if (notification && notification.id) {
+              await notificationRepository.createNotificationLog({
+                notificationId: notification.id,
+                provider: 'mock',
+                response: mockResult,
+                errorMessage: null
+              });
+            }
+          } catch (dbError) {
+            logger.warn('Failed to record mock SMS notification in database', {
+              to,
+              template,
+              userId: resolvedUserId,
+              error: dbError.message
+            });
+          }
+        }
 
         return res.status(201).json(notificationResultResponse(mockResult));
       }
