@@ -1,4 +1,5 @@
-﻿const twilio = require('twilio');
+﻿const axios = require('axios');
+const twilio = require('twilio');
 const { Vonage } = require('@vonage/server-sdk');
 const logger = require('../../utils/logger');
 const notificationRepository = require('../database/notification.repository');
@@ -23,6 +24,7 @@ function sanitizeProviderValue(value) {
     'your_twilio_auth_token',
     'your_vonage_api_key',
     'your_vonage_api_secret',
+    'your_textbelt_api_key',
     'EventPlanner',
   ]);
 
@@ -75,6 +77,7 @@ class SMSService {
     this.vonageClient = null;
     this.twilioConfigured = false;
     this.vonageConfigured = false;
+    this.textbeltConfigured = false;
     this.initialize();
   }
 
@@ -103,7 +106,12 @@ class SMSService {
         logger.info('Vonage SMS service initialized');
       }
 
-      if (!this.twilioConfigured && !this.vonageConfigured) {
+      if (this.isTextbeltConfigured()) {
+        this.textbeltConfigured = true;
+        logger.info('Textbelt SMS fallback initialized');
+      }
+
+      if (!this.twilioConfigured && !this.vonageConfigured && !this.textbeltConfigured) {
         logger.warn('No SMS service configured - SMS disabled');
       }
 
@@ -111,6 +119,7 @@ class SMSService {
       logger.error('Failed to initialize SMS service', { error: error.message });
       this.twilioConfigured = false;
       this.vonageConfigured = false;
+      this.textbeltConfigured = false;
     }
   }
 
@@ -118,10 +127,15 @@ class SMSService {
    * VÃ©rifie si Twilio est configurÃ©
    */
   isTwilioConfigured() {
+    const accountSid = sanitizeProviderValue(process.env.TWILIO_ACCOUNT_SID);
+    const authToken = sanitizeProviderValue(process.env.TWILIO_AUTH_TOKEN);
+    const phoneNumber = sanitizeProviderValue(process.env.TWILIO_PHONE_NUMBER);
+
     return !!(
-      sanitizeProviderValue(process.env.TWILIO_ACCOUNT_SID) &&
-      sanitizeProviderValue(process.env.TWILIO_AUTH_TOKEN) &&
-      sanitizeProviderValue(process.env.TWILIO_PHONE_NUMBER)
+      accountSid &&
+      /^AC[0-9a-f]{32}$/i.test(accountSid) &&
+      authToken &&
+      phoneNumber
     );
   }
 
@@ -133,6 +147,32 @@ class SMSService {
       sanitizeProviderValue(process.env.VONAGE_API_KEY) &&
       sanitizeProviderValue(process.env.VONAGE_API_SECRET)
     );
+  }
+
+  /**
+   * V?rifie si Textbelt est configur?
+   */
+  isTextbeltConfigured() {
+    return !!(
+      sanitizeProviderValue(process.env.TEXTBELT_API_KEY) ||
+      String(process.env.TEXTBELT_USE_FREE_KEY || '').trim().toLowerCase() === 'true'
+    );
+  }
+
+  /**
+   * R?cup?re la cl? Textbelt effective
+   */
+  getTextbeltApiKey() {
+    const configuredKey = sanitizeProviderValue(process.env.TEXTBELT_API_KEY);
+    if (configuredKey) {
+      return configuredKey;
+    }
+
+    if (String(process.env.TEXTBELT_USE_FREE_KEY || '').trim().toLowerCase() === 'true') {
+      return 'textbelt';
+    }
+
+    return null;
   }
 
   /**
@@ -214,6 +254,69 @@ class SMSService {
       }
     }
 
+    // Fallback Textbelt
+    if (this.textbeltConfigured) {
+      try {
+        const textbeltKey = this.getTextbeltApiKey();
+        let textbeltMessage = message;
+
+        if (textbeltKey === 'textbelt') {
+          const withoutUrls = message.replace(/https?:\/\/\S+/gi, '').replace(/\s{2,}/g, ' ').trim();
+          textbeltMessage =
+            withoutUrls && withoutUrls !== message
+              ? `${withoutUrls} Voir email pour le lien.`
+              : withoutUrls || message;
+        }
+
+        const result = await axios.post(
+          'https://textbelt.com/text',
+          {
+            phone: this.formatPhoneNumber(phoneNumber),
+            message: textbeltMessage,
+            key: textbeltKey,
+            sender:
+              sanitizeProviderValue(process.env.TEXTBELT_SENDER) ||
+              sanitizeProviderValue(process.env.VONAGE_FROM_NUMBER) ||
+              'EventPlanner'
+          },
+          {
+            timeout: parseInt(process.env.TEXTBELT_TIMEOUT_MS, 10) || 15000,
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json'
+            }
+          }
+        );
+
+        if (result.data?.success) {
+          const responseTime = Date.now() - startTime;
+
+          logger.sms('SMS sent via Textbelt', {
+            phoneNumber: this.maskPhoneNumber(phoneNumber),
+            messageId: result.data.textId,
+            responseTime,
+            provider: 'textbelt',
+            quotaRemaining: result.data.quotaRemaining
+          });
+
+          return {
+            success: true,
+            provider: 'textbelt',
+            messageId: result.data.textId,
+            responseTime,
+            quotaRemaining: result.data.quotaRemaining
+          };
+        }
+
+        throw new Error(result.data?.error || 'Textbelt send failed');
+      } catch (error) {
+        logger.error('Textbelt failed', {
+          error: error.message,
+          phoneNumber: this.maskPhoneNumber(phoneNumber)
+        });
+      }
+    }
+
     // Aucun service disponible
     if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
       logger.warn('SMS fallback - no service configured', {
@@ -228,7 +331,7 @@ class SMSService {
       error: 'Tous les services SMS ont Ã©chouÃ©',
       details: {
         message: 'Aucun service SMS disponible',
-        attempted_services: ['Twilio', 'Vonage', 'Fallback']
+        attempted_services: ['Twilio', 'Vonage', 'Textbelt', 'Fallback']
       }
     };
   }
@@ -664,7 +767,8 @@ class SMSService {
     try {
       const results = {
         twilio: { configured: this.twilioConfigured, status: 'unknown' },
-        vonage: { configured: this.vonageConfigured, status: 'unknown' }
+        vonage: { configured: this.vonageConfigured, status: 'unknown' },
+        textbelt: { configured: this.textbeltConfigured, status: 'unknown' }
       };
 
       // Tester Twilio
@@ -693,8 +797,14 @@ class SMSService {
         }
       }
 
+      if (this.textbeltConfigured) {
+        results.textbelt.status = 'available';
+        results.textbelt.mode = this.getTextbeltApiKey() === 'textbelt' ? 'free-key' : 'api-key';
+      }
+
       const overallHealthy = (this.twilioConfigured && results.twilio.status === 'healthy') ||
-                           (this.vonageConfigured && results.vonage.status === 'healthy');
+                           (this.vonageConfigured && results.vonage.status === 'healthy') ||
+                           (this.textbeltConfigured && results.textbelt.status === 'available');
 
       return {
         success: true,
@@ -726,6 +836,11 @@ class SMSService {
         vonage: {
           configured: this.vonageConfigured,
           fromNumber: sanitizeProviderValue(process.env.VONAGE_FROM_NUMBER)
+        },
+        textbelt: {
+          configured: this.textbeltConfigured,
+          mode: this.getTextbeltApiKey() === 'textbelt' ? 'free-key' : (this.textbeltConfigured ? 'api-key' : null),
+          sender: sanitizeProviderValue(process.env.TEXTBELT_SENDER)
         }
       }
     };
@@ -736,7 +851,7 @@ class SMSService {
    * @returns {boolean} True si configurÃ©
    */
   isReady() {
-    return this.twilioConfigured || this.vonageConfigured;
+    return this.twilioConfigured || this.vonageConfigured || this.textbeltConfigured;
   }
 
   /**
@@ -766,6 +881,7 @@ class SMSService {
     const results = {
       twilio: { success: false, error: null },
       vonage: { success: false, error: null },
+      textbelt: { success: false, error: null },
       overall: false
     };
 
@@ -797,7 +913,15 @@ class SMSService {
       }
     }
 
-    results.overall = results.twilio.success || results.vonage.success;
+    if (this.textbeltConfigured) {
+      results.textbelt = {
+        success: true,
+        mode: this.getTextbeltApiKey() === 'textbelt' ? 'free-key' : 'api-key',
+        note: 'Send-only provider; live delivery tested during actual SMS sending'
+      };
+    }
+
+    results.overall = results.twilio.success || results.vonage.success || results.textbelt.success;
     return results;
   }
 }

@@ -246,8 +246,14 @@ router.get('/providers', async (req, res) => {
       },
       sms: {
         ...smsStats.providers,
-        configured: smsStats.providers.twilio.configured || smsStats.providers.vonage.configured,
-        healthy: smsStats.providers.twilio.configured || smsStats.providers.vonage.configured
+        configured:
+          smsStats.providers.twilio.configured ||
+          smsStats.providers.vonage.configured ||
+          smsStats.providers.textbelt.configured,
+        healthy:
+          smsStats.providers.twilio.configured ||
+          smsStats.providers.vonage.configured ||
+          smsStats.providers.textbelt.configured
       }
     };
 

@@ -166,7 +166,9 @@ class NotificationServer {
       const emailConfigured =
         emailStats.providers.smtp.configured || emailStats.providers.sendgrid.configured;
       const smsConfigured =
-        smsStats.providers.twilio.configured || smsStats.providers.vonage.configured;
+        smsStats.providers.twilio.configured ||
+        smsStats.providers.vonage.configured ||
+        smsStats.providers.textbelt.configured;
 
       res.json({
         service: 'Notification Service',
@@ -274,7 +276,10 @@ class NotificationServer {
         // 📊 LOG DES CAPACITÉS CONFIGURÉES
         const capabilities = {
           email: !!process.env.SENDGRID_API_KEY,
-          sms: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
+          sms:
+            !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) ||
+            !!process.env.TEXTBELT_API_KEY ||
+            String(process.env.TEXTBELT_USE_FREE_KEY || '').trim().toLowerCase() === 'true',
           queue: !!process.env.REDIS_URL,
           templates: true
         };
