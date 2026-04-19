@@ -246,13 +246,13 @@ function generateTicketEmailTemplate(ticket, templateData) {
     <body>
         <div class="container">
             <div class="header">
-                <h1>🎫 Vos billets sont prêts !</h1>
-                <p>Merci pour votre réservation à ${templateData.event_title}</p>
+                <h1>Vos billets sont prets !</h1>
+                <p>Merci pour votre reservation a ${templateData.event_title}</p>
             </div>
             
             <div class="ticket-info">
-                <h3>Informations de l'événement</h3>
-                <p><strong>Événement:</strong> ${templateData.event_title}</p>
+                <h3>Informations de l'evenement</h3>
+                <p><strong>Evenement:</strong> ${templateData.event_title}</p>
                 <p><strong>Date:</strong> ${new Date(templateData.event_date).toLocaleDateString('fr-FR')}</p>
                 <p><strong>Lieu:</strong> ${templateData.event_location}</p>
                 <p><strong>Organisateur:</strong> ${templateData.organizer_name}</p>
@@ -268,8 +268,8 @@ function generateTicketEmailTemplate(ticket, templateData) {
             </div>
             
             <div class="footer">
-                <p>Cet email a été généré automatiquement par Event Planner.</p>
-                <p>Présentez ce code à l'entrée de l'événement.</p>
+                <p>Cet email a ete genere automatiquement par Event Planner.</p>
+                <p>Presentez ce code a l'entree de l'evenement.</p>
             </div>
         </div>
     </body>
@@ -295,14 +295,14 @@ function generateCustomEmailTemplate(recipient, templateData) {
     <body>
         <div class="container">
             <div class="header">
-                <h1>📢 Notification Event Planner</h1>
+                <h1>Notification Event Planner</h1>
             </div>
             
             <div class="content">
                 <p>Bonjour ${recipient.name || recipient.firstName || 'Utilisateur'},</p>
                 <p>${templateData.message || templateData.description || 'Vous avez une nouvelle notification.'}</p>
                 
-                ${templateData.event_title ? `<p><strong>Événement:</strong> ${templateData.event_title}</p>` : ''}
+                ${templateData.event_title ? `<p><strong>Evenement:</strong> ${templateData.event_title}</p>` : ''}
                 ${templateData.event_date ? `<p><strong>Date:</strong> ${new Date(templateData.event_date).toLocaleDateString('fr-FR')}</p>` : ''}
                 ${templateData.event_location ? `<p><strong>Lieu:</strong> ${templateData.event_location}</p>` : ''}
                 ${templateData.ticket_code ? `<p><strong>Code du billet:</strong> ${templateData.ticket_code}</p>` : ''}
@@ -311,8 +311,8 @@ function generateCustomEmailTemplate(recipient, templateData) {
             </div>
             
             <div class="footer">
-                <p>Cet email a été généré automatiquement par Event Planner.</p>
-                <p>Si vous ne souhaitez plus recevoir ces notifications, vous pouvez les désactiver dans vos paramètres.</p>
+                <p>Cet email a ete genere automatiquement par Event Planner.</p>
+                <p>Si vous ne souhaitez plus recevoir ces notifications, vous pouvez les desactiver dans vos parametres.</p>
             </div>
         </div>
     </body>

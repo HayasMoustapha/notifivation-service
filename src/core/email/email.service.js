@@ -883,11 +883,11 @@ class EmailService {
   getDefaultSubject(template) {
     const subjects = {
       'welcome': 'Bienvenue sur Event Planner !',
-      'password-reset': 'Réinitialisation de votre mot de passe',
+      'password-reset': 'Reinitialisation de votre mot de passe',
       'event-confirmation': 'Confirmation de votre inscription',
-      'event-invitation': 'Vous êtes invité à un événement',
-      'event-notification': 'Notification d\'événement',
-      'ticket-reminder': 'Rappel de votre événement'
+      'event-invitation': 'Vous etes invite a un evenement',
+      'event-notification': 'Notification evenement',
+      'ticket-reminder': 'Rappel de votre evenement'
     };
     
     return subjects[template] || 'Notification Event Planner';
@@ -905,30 +905,30 @@ class EmailService {
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #2c3e50;">Bienvenue {{user.first_name}} !</h2>
-            <p>Merci de vous être inscrit sur Event Planner.</p>
-            <p>Votre compte a été créé avec succès.</p>
+            <p>Merci de vous etre inscrit sur Event Planner.</p>
+            <p>Votre compte a ete cree avec succes.</p>
             <p><a href="{{loginUrl}}" style="background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Me connecter</a></p>
           </div>
         `
       },
       'password-reset': {
-        subject: 'Réinitialisation de votre mot de passe',
+        subject: 'Reinitialisation de votre mot de passe',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #e74c3c;">Réinitialisation du mot de passe</h2>
-            <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
-            <p>Cliquez sur le lien ci-dessous pour réinitialiser votre mot de passe:</p>
-            <p><a href="{{resetUrl}}" style="background: #e74c3c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Réinitialiser</a></p>
+            <h2 style="color: #e74c3c;">Reinitialisation du mot de passe</h2>
+            <p>Vous avez demande la reinitialisation de votre mot de passe.</p>
+            <p>Cliquez sur le lien ci-dessous pour reinitialiser votre mot de passe :</p>
+            <p><a href="{{resetUrl}}" style="background: #e74c3c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reinitialiser</a></p>
             <p>Ce lien expirera dans {{expiresIn}}.</p>
           </div>
         `
       },
       'event-confirmation': {
-        subject: 'Confirmation d\'inscription à {{event.title}}',
+        subject: 'Confirmation d\'inscription a {{event.title}}',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #27ae60;">Inscription confirmée !</h2>
-            <p>Votre inscription à l'événement <strong>{{event.title}}</strong> a été confirmée.</p>
+            <h2 style="color: #27ae60;">Inscription confirmee !</h2>
+            <p>Votre inscription a l'evenement <strong>{{event.title}}</strong> a ete confirmee.</p>
             <p><strong>Date:</strong> {{event.eventDate}}</p>
             <p><strong>Lieu:</strong> {{event.location}}</p>
             <p><strong>Type de ticket:</strong> {{ticket.type}}</p>
