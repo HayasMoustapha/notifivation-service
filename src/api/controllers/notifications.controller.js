@@ -43,7 +43,21 @@ class NotificationsController {
       // Note: La création de notification est gérée par le service d'email
       // pour les templates utilisateur (non-système) avec userId valide
 
-      return res.status(201).json(notificationResultResponse(result));
+      if (!result.success) {
+        return res.status(503).json(errorResponse(
+          'Aucun provider email reel n est configure ou l envoi a echoue',
+          {
+            ...(result.details || {}),
+            provider: result.provider || null,
+            simulated: result.simulated === true
+          },
+          'EMAIL_SEND_FAILED'
+        ));
+      }
+
+      return res
+        .status(result.provider === 'mock' || result.simulated === true || result.skipped === true ? 202 : 201)
+        .json(notificationResultResponse(result));
     } catch (error) {
       logger.error('Failed to send email', { error: error.message, to: req.body.to });
       return res.status(500).json(errorResponse('Échec de l\'envoi de l\'email', null, 'EMAIL_SEND_FAILED'));
@@ -93,65 +107,26 @@ class NotificationsController {
     try {
       const { to, template, data, options = {}, userId } = req.body;
 
-      // En développement, simuler l'envoi
-      if (process.env.NODE_ENV === 'development') {
-        const resolvedUserId = userId || data?.userId || null;
-        const mockResult = {
-          success: true,
-          messageId: `mock-sms-${Date.now()}`,
-          to,
-          sentAt: new Date().toISOString(),
-          provider: 'mock',
-          template
-        };
-
-        if (!smsService.isSystemTemplate(template) && resolvedUserId) {
-          try {
-            const notification = await notificationRepository.createNotification({
-              userId: resolvedUserId,
-              type: template,
-              channel: 'sms',
-              subject: null,
-              content: `SMS envoyé à ${smsService.maskPhoneNumber(to)}`,
-              status: 'sent',
-              sentAt: mockResult.sentAt
-            });
-
-            if (notification && notification.id) {
-              await notificationRepository.createNotificationLog({
-                notificationId: notification.id,
-                provider: 'mock',
-                response: mockResult,
-                errorMessage: null
-              });
-            }
-          } catch (dbError) {
-            logger.warn('Failed to record mock SMS notification in database', {
-              to,
-              template,
-              userId: resolvedUserId,
-              error: dbError.message
-            });
-          }
-        }
-
-        return res.status(201).json(notificationResultResponse(mockResult));
-      }
-
-      // Passer le userId au service SMS pour la gestion des préférences et notifications
       const result = await smsService.sendTransactionalSMS(to, template, data, {
         ...options,
         userId: userId || data?.userId || null,
         ip: req.ip
       });
 
-      // Note: La création de notification est gérée par le service SMS
-      // pour les templates utilisateur (non-système) avec userId valide
+      if (!result.success) {
+        return res.status(503).json(errorResponse(
+          'Aucun provider SMS reel n est configure ou l envoi a echoue',
+          result.details || null,
+          'SMS_SEND_FAILED'
+        ));
+      }
 
-      return res.status(201).json(notificationResultResponse(result));
+      return res
+        .status(result.skipped === true ? 202 : 201)
+        .json(notificationResultResponse(result));
     } catch (error) {
       logger.error('Failed to send SMS', { error: error.message });
-      return res.status(500).json(errorResponse('Échec de l\'envoi du SMS', null, 'SMS_SEND_FAILED'));
+      return res.status(500).json(errorResponse('Echec de l\'envoi du SMS', null, 'SMS_SEND_FAILED'));
     }
   }
 

@@ -1,16 +1,46 @@
-const twilio = require('twilio');
+﻿const twilio = require('twilio');
 const { Vonage } = require('@vonage/server-sdk');
 const logger = require('../../utils/logger');
 const notificationRepository = require('../database/notification.repository');
 
+function sanitizeProviderValue(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  const normalized = String(value).trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const placeholderPatterns = [/^your_/i, /^\+1234567890$/];
+  if (placeholderPatterns.some((pattern) => pattern.test(normalized))) {
+    return null;
+  }
+
+  const placeholderValues = new Set([
+    'your_twilio_account_sid',
+    'your_twilio_auth_token',
+    'your_vonage_api_key',
+    'your_vonage_api_secret',
+    'EventPlanner',
+  ]);
+
+  if (placeholderValues.has(normalized)) {
+    return null;
+  }
+
+  return normalized;
+}
+
 /**
  * Service d'envoi de SMS transactionnels
- * Utilise Twilio + Vonage fallback avec haute disponibilité
+ * Utilise Twilio + Vonage fallback avec haute disponibilitÃ©
  */
 class SMSService {
   /**
-   * Templates système (auth/payment) - pas de vérification de préférences, pas de userId requis
-   * Ces SMS sont critiques et doivent toujours être envoyés
+   * Templates systÃ¨me (auth/payment) - pas de vÃ©rification de prÃ©fÃ©rences, pas de userId requis
+   * Ces SMS sont critiques et doivent toujours Ãªtre envoyÃ©s
    */
   static SYSTEM_TEMPLATES = [
     'otp',
@@ -20,20 +50,21 @@ class SMSService {
   ];
 
   /**
-   * Templates utilisateur (core) - vérification des préférences, userId requis
-   * Ces SMS concernent les invités/utilisateurs et respectent leurs préférences
+   * Templates utilisateur (core) - vÃ©rification des prÃ©fÃ©rences, userId requis
+   * Ces SMS concernent les invitÃ©s/utilisateurs et respectent leurs prÃ©fÃ©rences
    */
   static USER_TEMPLATES = [
     'appointment-reminder',
+    'event-invitation',
     'event-reminder',
     'ticket-reminder',
     'event-confirmation'
   ];
 
   /**
-   * Vérifie si un template est un SMS système (auth/payment)
+   * VÃ©rifie si un template est un SMS systÃ¨me (auth/payment)
    * @param {string} template - Nom du template
-   * @returns {boolean} True si c'est un SMS système
+   * @returns {boolean} True si c'est un SMS systÃ¨me
    */
   isSystemTemplate(template) {
     return SMSService.SYSTEM_TEMPLATES.includes(template);
@@ -84,28 +115,32 @@ class SMSService {
   }
 
   /**
-   * Vérifie si Twilio est configuré
+   * VÃ©rifie si Twilio est configurÃ©
    */
   isTwilioConfigured() {
-    return !!(process.env.TWILIO_ACCOUNT_SID && 
-             process.env.TWILIO_AUTH_TOKEN && 
-             process.env.TWILIO_PHONE_NUMBER);
+    return !!(
+      sanitizeProviderValue(process.env.TWILIO_ACCOUNT_SID) &&
+      sanitizeProviderValue(process.env.TWILIO_AUTH_TOKEN) &&
+      sanitizeProviderValue(process.env.TWILIO_PHONE_NUMBER)
+    );
   }
 
   /**
-   * Vérifie si Vonage est configuré
+   * VÃ©rifie si Vonage est configurÃ©
    */
   isVonageConfigured() {
-    return !!(process.env.VONAGE_API_KEY && 
-             process.env.VONAGE_API_SECRET);
+    return !!(
+      sanitizeProviderValue(process.env.VONAGE_API_KEY) &&
+      sanitizeProviderValue(process.env.VONAGE_API_SECRET)
+    );
   }
 
   /**
    * Envoie un SMS avec fallback automatique
-   * @param {string} phoneNumber - Numéro de téléphone du destinataire
-   * @param {string} message - Message à envoyer
+   * @param {string} phoneNumber - NumÃ©ro de tÃ©lÃ©phone du destinataire
+   * @param {string} message - Message Ã  envoyer
    * @param {Object} options - Options additionnelles
-   * @returns {Promise<Object>} Résultat de l'envoi
+   * @returns {Promise<Object>} RÃ©sultat de l'envoi
    */
   async sendSMSWithFallback(phoneNumber, message, options = {}) {
     const startTime = Date.now();
@@ -190,7 +225,7 @@ class SMSService {
 
     return {
       success: false,
-      error: 'Tous les services SMS ont échoué',
+      error: 'Tous les services SMS ont Ã©chouÃ©',
       details: {
         message: 'Aucun service SMS disponible',
         attempted_services: ['Twilio', 'Vonage', 'Fallback']
@@ -200,17 +235,17 @@ class SMSService {
 
   /**
    * Envoie un SMS transactionnel avec retry automatique
-   * @param {string} phoneNumber - Numéro de téléphone du destinataire
-   * @param {string} template - Template à utiliser
-   * @param {Object} data - Données du template
-   * @param {Object} options - Options additionnelles (userId pour vérifier les préférences)
-   * @returns {Promise<Object>} Résultat de l'envoi
+   * @param {string} phoneNumber - NumÃ©ro de tÃ©lÃ©phone du destinataire
+   * @param {string} template - Template Ã  utiliser
+   * @param {Object} data - DonnÃ©es du template
+   * @param {Object} options - Options additionnelles (userId pour vÃ©rifier les prÃ©fÃ©rences)
+   * @returns {Promise<Object>} RÃ©sultat de l'envoi
    */
   async sendTransactionalSMS(phoneNumber, template, data, options = {}) {
     try {
       const isSystemSMS = this.isSystemTemplate(template);
 
-      // Pour les SMS utilisateur (non-système), vérifier les préférences si userId fourni
+      // Pour les SMS utilisateur (non-systÃ¨me), vÃ©rifier les prÃ©fÃ©rences si userId fourni
       if (!isSystemSMS && options.userId) {
         try {
           const preferencesService = require('../preferences/preferences.service');
@@ -243,7 +278,7 @@ class SMSService {
             reason: preferenceCheck.reason
           });
         } catch (prefError) {
-          // En cas d'erreur de vérification des préférences pour SMS utilisateur, on skip
+          // En cas d'erreur de vÃ©rification des prÃ©fÃ©rences pour SMS utilisateur, on skip
           logger.warn('Failed to check SMS preferences, skipping by default', {
             phoneNumber: this.maskPhoneNumber(phoneNumber),
             template,
@@ -268,7 +303,7 @@ class SMSService {
 
       const result = await this.sendSMSWithFallback(phoneNumber, message, options);
 
-      // Enregistrer la notification seulement pour les SMS utilisateur (non-système) avec userId
+      // Enregistrer la notification seulement pour les SMS utilisateur (non-systÃ¨me) avec userId
       if (!isSystemSMS && options.userId) {
         try {
           const notification = await notificationRepository.createNotification({
@@ -276,12 +311,12 @@ class SMSService {
             type: template,
             channel: 'sms',
             subject: null,
-            content: `SMS envoyé à ${this.maskPhoneNumber(phoneNumber)}`,
+            content: `SMS envoyÃ© Ã  ${this.maskPhoneNumber(phoneNumber)}`,
             status: result.success ? 'sent' : 'failed',
             sentAt: result.success ? new Date().toISOString() : null
           });
 
-          // Créer un log avec les détails du provider
+          // CrÃ©er un log avec les dÃ©tails du provider
           if (notification && notification.id) {
             await notificationRepository.createNotificationLog({
               notificationId: notification.id,
@@ -291,7 +326,7 @@ class SMSService {
             });
           }
         } catch (dbError) {
-          // Ne pas faire échouer l'envoi si l'enregistrement en DB échoue
+          // Ne pas faire Ã©chouer l'envoi si l'enregistrement en DB Ã©choue
           logger.warn('Failed to record SMS notification in database', {
             phoneNumber: this.maskPhoneNumber(phoneNumber),
             template,
@@ -309,7 +344,7 @@ class SMSService {
         ip: options.ip
       });
 
-      // Vérifier si l'erreur est retryable
+      // VÃ©rifier si l'erreur est retryable
       const isRetryable = this.isRetryableError(error);
 
       if (isRetryable) {
@@ -386,7 +421,7 @@ class SMSService {
 
       return {
         success: false,
-        error: 'Échec d\'envoi du SMS transactionnel',
+        error: 'Ã‰chec d\'envoi du SMS transactionnel',
         details: {
           message: error.message,
           template,
@@ -399,10 +434,10 @@ class SMSService {
   /**
    * Met en file d'attente des SMS en masse
    * @param {Array} recipients - Liste des destinataires
-   * @param {string} template - Template à utiliser
-   * @param {Object} data - Données du template
+   * @param {string} template - Template Ã  utiliser
+   * @param {Object} data - DonnÃ©es du template
    * @param {Object} options - Options
-   * @returns {Promise<Object>} Résultat de la mise en queue
+   * @returns {Promise<Object>} RÃ©sultat de la mise en queue
    */
   async queueBulkSMS(recipients, template, data, options = {}) {
     try {
@@ -435,7 +470,7 @@ class SMSService {
       
       return {
         success: false,
-        error: 'Échec de mise en queue',
+        error: 'Ã‰chec de mise en queue',
         details: {
           message: error.message,
           recipientCount: recipients.length,
@@ -446,17 +481,17 @@ class SMSService {
   }
 
   /**
-   * Génère un message SMS avec template DB en priorité
+   * GÃ©nÃ¨re un message SMS avec template DB en prioritÃ©
    * @param {string} template - Nom du template
-   * @param {Object} data - Données du template
+   * @param {Object} data - DonnÃ©es du template
    * @param {Object} options - Options
-   * @returns {string} Message généré
+   * @returns {string} Message gÃ©nÃ©rÃ©
    */
   async generateSMSMessage(template, data, options = {}) {
     try {
       let message;
 
-      // 1. Essayer de récupérer le template depuis la DB
+      // 1. Essayer de rÃ©cupÃ©rer le template depuis la DB
       const templatesService = require('../templates/templates.service');
       const dbTemplate = await templatesService.getTemplateByName(template, 'sms');
 
@@ -468,13 +503,14 @@ class SMSService {
         // Fallback: templates inline
         const inlineTemplates = {
           'welcome': `Bienvenue sur Event Planner {{user.firstName || user.name}}! Votre compte est maintenant actif.`,
-          'password-reset': `Event Planner: Code de réinitialisation: {{resetCode}}. Valable {{expiresIn}}.`,
+          'password-reset': `Event Planner: Code de rÃ©initialisation: {{resetCode}}. Valable {{expiresIn}}.`,
+          'event-invitation': `Event Planner: Invitation pour {{eventName}} le {{eventDate}} a {{eventTime}}. Lieu: {{eventLocation}}. Acces: {{ticketAccessUrl}}`,
           'event-confirmation': `Event Planner: Confirmation pour "{{event.title}}". Date: {{event.date}}. Lieu: {{event.location}}. Code: {{ticket.code}}`,
-          'event-reminder': `Event Planner: Rappel! {{event.title}} a lieu demain à {{event.time}}. Lieu: {{event.location}}`,
-          'ticket-reminder': `Event Planner: N'oubliez pas votre événement {{event.title}} aujourd'hui à {{event.time}}!`,
-          'event-cancelled': `Event Planner: L'événement {{event.title}} a été annulé. Contactez-nous pour plus d'informations.`,
-          'payment-confirmation': `Event Planner: Paiement reçu pour {{event.title}}. Montant: {{payment.amount}}€. Merci!`,
-          'otp': `Event Planner: Votre code de vérification est {{otpCode}}. Valable {{expiresIn}}.`
+          'event-reminder': `Event Planner: Rappel! {{event.title}} a lieu demain Ã  {{event.time}}. Lieu: {{event.location}}`,
+          'ticket-reminder': `Event Planner: N'oubliez pas votre Ã©vÃ©nement {{event.title}} aujourd'hui Ã  {{event.time}}!`,
+          'event-cancelled': `Event Planner: L'Ã©vÃ©nement {{event.title}} a Ã©tÃ© annulÃ©. Contactez-nous pour plus d'informations.`,
+          'payment-confirmation': `Event Planner: Paiement reÃ§u pour {{event.title}}. Montant: {{payment.amount}}â‚¬. Merci!`,
+          'otp': `Event Planner: Votre code de vÃ©rification est {{otpCode}}. Valable {{expiresIn}}.`
         };
 
         message = inlineTemplates[template] || `Event Planner: ${template}`;
@@ -486,7 +522,7 @@ class SMSService {
         });
       }
 
-      // Limiter à 160 caractères (standard SMS)
+      // Limiter Ã  160 caractÃ¨res (standard SMS)
       if (message.length > 160) {
         message = message.substring(0, 157) + '...';
       }
@@ -505,10 +541,10 @@ class SMSService {
 
   /**
    * Envoie un SMS de bienvenue
-   * @param {string} phoneNumber - Numéro de téléphone
-   * @param {Object} userData - Données utilisateur
+   * @param {string} phoneNumber - NumÃ©ro de tÃ©lÃ©phone
+   * @param {Object} userData - DonnÃ©es utilisateur
    * @param {Object} options - Options
-   * @returns {Promise<Object>} Résultat de l'envoi
+   * @returns {Promise<Object>} RÃ©sultat de l'envoi
    */
   async sendWelcomeSMS(phoneNumber, userData, options = {}) {
     return await this.sendTransactionalSMS(phoneNumber, 'welcome', {
@@ -517,11 +553,11 @@ class SMSService {
   }
 
   /**
-   * Envoie un SMS de réinitialisation de mot de passe
-   * @param {string} phoneNumber - Numéro de téléphone
-   * @param {string} resetCode - Code de réinitialisation
+   * Envoie un SMS de rÃ©initialisation de mot de passe
+   * @param {string} phoneNumber - NumÃ©ro de tÃ©lÃ©phone
+   * @param {string} resetCode - Code de rÃ©initialisation
    * @param {Object} options - Options
-   * @returns {Promise<Object>} Résultat de l'envoi
+   * @returns {Promise<Object>} RÃ©sultat de l'envoi
    */
   async sendPasswordResetSMS(phoneNumber, resetCode, options = {}) {
     return await this.sendTransactionalSMS(phoneNumber, 'password-reset', {
@@ -531,12 +567,12 @@ class SMSService {
   }
 
   /**
-   * Envoie un SMS de confirmation d'événement
-   * @param {string} phoneNumber - Numéro de téléphone
-   * @param {Object} eventData - Données de l'événement
-   * @param {Object} ticketData - Données du ticket
+   * Envoie un SMS de confirmation d'Ã©vÃ©nement
+   * @param {string} phoneNumber - NumÃ©ro de tÃ©lÃ©phone
+   * @param {Object} eventData - DonnÃ©es de l'Ã©vÃ©nement
+   * @param {Object} ticketData - DonnÃ©es du ticket
    * @param {Object} options - Options
-   * @returns {Promise<Object>} Résultat de l'envoi
+   * @returns {Promise<Object>} RÃ©sultat de l'envoi
    */
   async sendEventConfirmationSMS(phoneNumber, eventData, ticketData, options = {}) {
     return await this.sendTransactionalSMS(phoneNumber, 'event-confirmation', {
@@ -546,11 +582,11 @@ class SMSService {
   }
 
   /**
-   * Envoie un SMS de rappel d'événement
-   * @param {string} phoneNumber - Numéro de téléphone
-   * @param {Object} eventData - Données de l'événement
+   * Envoie un SMS de rappel d'Ã©vÃ©nement
+   * @param {string} phoneNumber - NumÃ©ro de tÃ©lÃ©phone
+   * @param {Object} eventData - DonnÃ©es de l'Ã©vÃ©nement
    * @param {Object} options - Options
-   * @returns {Promise<Object>} Résultat de l'envoi
+   * @returns {Promise<Object>} RÃ©sultat de l'envoi
    */
   async sendEventReminderSMS(phoneNumber, eventData, options = {}) {
     return await this.sendTransactionalSMS(phoneNumber, 'event-reminder', {
@@ -561,11 +597,11 @@ class SMSService {
 
   /**
    * Envoie un SMS avec code OTP
-   * @param {string} phoneNumber - Numéro de téléphone
+   * @param {string} phoneNumber - NumÃ©ro de tÃ©lÃ©phone
    * @param {string} otpCode - Code OTP
    * @param {string} purpose - But du code
    * @param {Object} options - Options
-   * @returns {Promise<Object>} Résultat de l'envoi
+   * @returns {Promise<Object>} RÃ©sultat de l'envoi
    */
   async sendOTPSMS(phoneNumber, otpCode, purpose = 'verification', options = {}) {
     return await this.sendTransactionalSMS(phoneNumber, 'otp', {
@@ -578,33 +614,33 @@ class SMSService {
   }
 
   /**
-   * Valide un numéro de téléphone
-   * @param {string} phoneNumber - Numéro à valider
+   * Valide un numÃ©ro de tÃ©lÃ©phone
+   * @param {string} phoneNumber - NumÃ©ro Ã  valider
    * @returns {boolean} True si valide
    */
   validatePhoneNumber(phoneNumber) {
-    // Expression régulière pour valider les numéros internationaux
+    // Expression rÃ©guliÃ¨re pour valider les numÃ©ros internationaux
     const phoneRegex = /^\+?[1-9]\d{1,14}$/;
     return phoneRegex.test(phoneNumber.replace(/[\s\-\(\)]/g, ''));
   }
 
   /**
-   * Formate un numéro de téléphone
-   * @param {string} phoneNumber - Numéro à formater
-   * @returns {string} Numéro formaté
+   * Formate un numÃ©ro de tÃ©lÃ©phone
+   * @param {string} phoneNumber - NumÃ©ro Ã  formater
+   * @returns {string} NumÃ©ro formatÃ©
    */
   formatPhoneNumber(phoneNumber) {
     if (!phoneNumber) {
       return '';
     }
-    // Supprimer tous les caractères non numériques sauf le +
+    // Supprimer tous les caractÃ¨res non numÃ©riques sauf le +
     return phoneNumber.replace(/[^\d+]/g, '');
   }
 
   /**
-   * Masque partiellement un numéro de téléphone pour les logs
-   * @param {string} phoneNumber - Numéro à masquer
-   * @returns {string} Numéro masqué
+   * Masque partiellement un numÃ©ro de tÃ©lÃ©phone pour les logs
+   * @param {string} phoneNumber - NumÃ©ro Ã  masquer
+   * @returns {string} NumÃ©ro masquÃ©
    */
   maskPhoneNumber(phoneNumber) {
     if (!phoneNumber || typeof phoneNumber !== 'string' || phoneNumber.length < 4) {
@@ -621,8 +657,8 @@ class SMSService {
   }
 
   /**
-   * Vérifie la santé du service SMS
-   * @returns {Promise<Object>} État de santé du service
+   * VÃ©rifie la santÃ© du service SMS
+   * @returns {Promise<Object>} Ã‰tat de santÃ© du service
    */
   async healthCheck() {
     try {
@@ -676,7 +712,7 @@ class SMSService {
   }
 
   /**
-   * Récupère les statistiques du service
+   * RÃ©cupÃ¨re les statistiques du service
    * @returns {Object} Statistiques
    */
   getStats() {
@@ -684,28 +720,28 @@ class SMSService {
       providers: {
         twilio: {
           configured: this.twilioConfigured,
-          accountSid: process.env.TWILIO_ACCOUNT_SID,
-          phoneNumber: this.maskPhoneNumber(process.env.TWILIO_PHONE_NUMBER)
+          accountSid: sanitizeProviderValue(process.env.TWILIO_ACCOUNT_SID),
+          phoneNumber: this.maskPhoneNumber(sanitizeProviderValue(process.env.TWILIO_PHONE_NUMBER))
         },
         vonage: {
           configured: this.vonageConfigured,
-          fromNumber: process.env.VONAGE_FROM_NUMBER
+          fromNumber: sanitizeProviderValue(process.env.VONAGE_FROM_NUMBER)
         }
       }
     };
   }
 
   /**
-   * Vérifie si au moins un service SMS est configuré
-   * @returns {boolean} True si configuré
+   * VÃ©rifie si au moins un service SMS est configurÃ©
+   * @returns {boolean} True si configurÃ©
    */
   isReady() {
     return this.twilioConfigured || this.vonageConfigured;
   }
 
   /**
-   * Détermine si une erreur est retryable
-   * @param {Error} error - L'erreur à analyser
+   * DÃ©termine si une erreur est retryable
+   * @param {Error} error - L'erreur Ã  analyser
    * @returns {boolean} True si l'erreur est retryable
    */
   isRetryableError(error) {
@@ -723,8 +759,8 @@ class SMSService {
   }
 
   /**
-   * Test la connectivité avec les services SMS
-   * @returns {Promise<Object>} Résultat des tests
+   * Test la connectivitÃ© avec les services SMS
+   * @returns {Promise<Object>} RÃ©sultat des tests
    */
   async testConnectivity() {
     const results = {
@@ -767,3 +803,5 @@ class SMSService {
 }
 
 module.exports = new SMSService();
+
+

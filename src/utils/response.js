@@ -277,14 +277,26 @@ function queueStatsResponse(stats, meta = {}) {
  * @returns {Object} Réponse formatée
  */
 function notificationResultResponse(results, meta = {}) {
+  const simulated = results.simulated === true || String(results.provider || '').toLowerCase() === 'mock';
+  const skipped = results.skipped === true;
+
   return {
-    success: results.success,
-    message: results.success ? 'Notification envoyée avec succès' : 'Échec de l\'envoi de la notification',
+    success: results.success && !skipped,
+    message: skipped
+      ? 'Notification non envoyee car les preferences du destinataire bloquent ce canal'
+      : simulated
+      ? 'Notification simulee - aucun provider reel n est configure'
+      : results.success
+        ? 'Notification envoyee avec succes'
+        : 'Echec de l envoi de la notification',
     data: {
       provider: results.provider,
       messageId: results.messageId,
       responseTime: results.responseTime,
-      sentAt: new Date().toISOString()
+      sentAt: new Date().toISOString(),
+      simulated,
+      skipped,
+      reason: results.reason ?? null
     },
     meta: {
       timestamp: new Date().toISOString(),

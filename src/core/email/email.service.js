@@ -4,71 +4,44 @@ const fs = require('fs').promises;
 const path = require('path');
 const logger = require('../../utils/logger');
 const notificationRepository = require('../database/notification.repository');
+const { renderTemplateContent } = require('../templates/template-renderer');
 
-function getValueByPath(obj, pathStr) {
-  if (!pathStr) return undefined;
-  return pathStr.split('.').reduce((acc, key) => (acc ? acc[key] : undefined), obj);
-}
-
-function parseTokens(expr) {
-  const tokens = [];
-  const re = /"([^"]*)"|'([^']*)'|([^\s]+)/g;
-  let match;
-  while ((match = re.exec(expr)) !== null) {
-    if (match[1] !== undefined) tokens.push(match[1]);
-    else if (match[2] !== undefined) tokens.push(match[2]);
-    else tokens.push(match[3]);
-  }
-  return tokens;
-}
-
-function evaluateCondition(expr, data) {
-  const trimmed = expr.trim();
-  if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
-    const inner = trimmed.slice(1, -1).trim();
-    const tokens = parseTokens(inner);
-    const op = tokens[0];
-    if (op === 'eq') {
-      const left = getValueByPath(data, tokens[1]) ?? tokens[1];
-      const right = getValueByPath(data, tokens[2]) ?? tokens[2];
-      return String(left) === String(right);
-    }
-    if (op === 'gt') {
-      const leftVal = getValueByPath(data, tokens[1]) ?? tokens[1];
-      const rightVal = getValueByPath(data, tokens[2]) ?? tokens[2];
-      const left = Number(leftVal);
-      const right = Number(rightVal);
-      if (Number.isNaN(left) || Number.isNaN(right)) return false;
-      return left > right;
-    }
-    return false;
+function sanitizeProviderValue(value) {
+  if (value === undefined || value === null) {
+    return null;
   }
 
-  const value = getValueByPath(data, trimmed);
-  if (Array.isArray(value)) return value.length > 0;
-  if (typeof value === 'string') return value.trim().length > 0;
-  return Boolean(value);
-}
-
-function renderTemplateContent(template, data) {
-  if (!template) return '';
-  let output = template;
-
-  const ifBlockRegex = /\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g;
-  let safety = 0;
-  while (ifBlockRegex.test(output) && safety < 50) {
-    safety += 1;
-    output = output.replace(ifBlockRegex, (match, condition, content) => {
-      return evaluateCondition(condition, data) ? content : '';
-    });
+  const normalized = String(value).trim();
+  if (!normalized) {
+    return null;
   }
 
-  output = output.replace(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g, (match, key) => {
-    const value = getValueByPath(data, key);
-    return value === undefined || value === null ? '' : String(value);
-  });
+  const placeholderPatterns = [
+    /^your_/i,
+    /^SG\.your_/i,
+    /^your-email@/i,
+    /^your_email@/i,
+  ];
 
-  return output;
+  if (placeholderPatterns.some((pattern) => pattern.test(normalized))) {
+    return null;
+  }
+
+  const placeholderValues = new Set([
+    'your_email@gmail.com',
+    'your_app_password',
+    'your_sendgrid_api_key',
+  ]);
+
+  if (placeholderValues.has(normalized)) {
+    return null;
+  }
+
+  return normalized;
+}
+
+function isMockEmailDeliveryEnabled() {
+  return String(process.env.MOCK_EMAIL_DELIVERY || '').trim().toLowerCase() === 'true';
 }
 
 /**
@@ -94,12 +67,12 @@ class EmailService {
       // Initialiser Nodemailer (SMTP)
       if (this.isSMTPConfigured()) {
         this.smtpTransporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
+          host: sanitizeProviderValue(process.env.SMTP_HOST),
           port: parseInt(process.env.SMTP_PORT) || 587,
           secure: process.env.SMTP_SECURE === 'true',
           auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS
+            user: sanitizeProviderValue(process.env.SMTP_USER),
+            pass: sanitizeProviderValue(process.env.SMTP_PASS)
           },
           pool: true, // Connection pooling
           maxConnections: 5,
@@ -122,8 +95,9 @@ class EmailService {
       }
 
       // Initialiser SendGrid comme fallback
-      if (process.env.SENDGRID_API_KEY) {
-        sendgridMail.setApiKey(process.env.SENDGRID_API_KEY);
+      const sendgridApiKey = sanitizeProviderValue(process.env.SENDGRID_API_KEY);
+      if (sendgridApiKey) {
+        sendgridMail.setApiKey(sendgridApiKey);
         this.sendgridConfigured = true;
         logger.info('SendGrid service ready');
       }
@@ -165,7 +139,11 @@ class EmailService {
    * Vérifie si SMTP est configuré
    */
   isSMTPConfigured() {
-    return !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+    return !!(
+      sanitizeProviderValue(process.env.SMTP_HOST) &&
+      sanitizeProviderValue(process.env.SMTP_USER) &&
+      sanitizeProviderValue(process.env.SMTP_PASS)
+    );
   }
 
   /**
@@ -271,19 +249,25 @@ class EmailService {
       }
     }
 
-    // Aucun service disponible : en dev/test on mocke pour ne pas bloquer les workflows
-    if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+    // Aucun service disponible : mock explicite seulement
+    if (isMockEmailDeliveryEnabled()) {
       const responseTime = Date.now() - startTime;
       logger.warn('Email mock - no provider configured', {
         to: mailOptions.to,
         subject: mailOptions.subject
       });
       return {
-        success: true,
+        success: false,
         provider: 'mock',
         messageId: `mock-email-${Date.now()}`,
         responseTime,
-        fallback: true
+        fallback: true,
+        simulated: true,
+        error: 'No real email provider configured',
+        details: {
+          message: 'Aucun provider email reel n est configure. Livraison simulee uniquement.',
+          attempted_services: ['SMTP', 'SendGrid', 'Mock']
+        }
       };
     }
 
@@ -634,6 +618,34 @@ class EmailService {
   generateFallbackHTML(template, data, options = {}) {
     const firstName = data.firstName || 'Utilisateur';
     const subject = data.subject || `Notification Event Planner - ${template}`;
+    const primaryUrl =
+      data.ticketAccessUrl ||
+      data.ticketDownloadUrl ||
+      data.responseUrl ||
+      data.acceptUrl ||
+      data.loginUrl ||
+      data.eventUrl ||
+      null;
+    const secondaryUrl =
+      data.ticketDownloadUrl && data.ticketDownloadUrl !== primaryUrl
+        ? data.ticketDownloadUrl
+        : data.responseUrl && data.responseUrl !== primaryUrl
+          ? data.responseUrl
+          : data.loginUrl && data.loginUrl !== primaryUrl
+            ? data.loginUrl
+            : null;
+    const primaryLabel =
+      template === 'event-invitation'
+        ? 'Voir l invitation'
+        : data.ticketDownloadUrl
+          ? 'Telecharger'
+          : 'Ouvrir';
+    const secondaryLabel =
+      data.ticketDownloadUrl && data.ticketDownloadUrl === secondaryUrl
+        ? 'Telecharger le ticket'
+        : data.responseUrl && data.responseUrl === secondaryUrl
+          ? 'Repondre'
+          : 'Se connecter';
     
     return `
 <!DOCTYPE html>
@@ -647,6 +659,11 @@ class EmailService {
         .container { background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
         .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #007bff; padding-bottom: 20px; }
         .content { margin-bottom: 30px; }
+        .actions { margin: 24px 0; text-align: center; }
+        .button { display: inline-block; margin: 6px; padding: 12px 20px; border-radius: 6px; background: #0f62fe; color: #fff; text-decoration: none; font-weight: 600; }
+        .button-secondary { background: #3d70b2; }
+        .link-box { margin-top: 20px; padding: 16px; border-radius: 8px; background: #f8fafc; }
+        .link-row { margin: 8px 0; word-break: break-word; }
         .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px; }
     </style>
 </head>
@@ -667,6 +684,21 @@ class EmailService {
             ${data.eventName ? `<p>Événement: ${data.eventName}</p>` : ''}
             ${data.transactionId ? `<p>Transaction: ${data.transactionId}</p>` : ''}
             ${data.ticketCount ? `<p>Tickets: ${data.ticketCount}</p>` : ''}
+            ${data.message ? `<p>${data.message}</p>` : ''}
+            
+            ${primaryUrl ? `
+            <div class="actions">
+                <a class="button" href="${primaryUrl}">${primaryLabel}</a>
+                ${secondaryUrl ? `<a class="button button-secondary" href="${secondaryUrl}">${secondaryLabel}</a>` : ''}
+            </div>` : ''}
+
+            ${(primaryUrl || secondaryUrl) ? `
+            <div class="link-box">
+                ${primaryUrl ? `<p class="link-row"><strong>Lien principal :</strong> <a href="${primaryUrl}">${primaryUrl}</a></p>` : ''}
+                ${secondaryUrl ? `<p class="link-row"><strong>Lien secondaire :</strong> <a href="${secondaryUrl}">${secondaryUrl}</a></p>` : ''}
+                ${data.acceptUrl ? `<p class="link-row"><strong>Accepter :</strong> <a href="${data.acceptUrl}">${data.acceptUrl}</a></p>` : ''}
+                ${data.declineUrl ? `<p class="link-row"><strong>Decliner :</strong> <a href="${data.declineUrl}">${data.declineUrl}</a></p>` : ''}
+            </div>` : ''}
             
             <p>Pour plus d'informations, connectez-vous à votre compte Event Planner.</p>
         </div>
@@ -840,6 +872,7 @@ class EmailService {
       'welcome': 'Bienvenue sur Event Planner !',
       'password-reset': 'Réinitialisation de votre mot de passe',
       'event-confirmation': 'Confirmation de votre inscription',
+      'event-invitation': 'Vous êtes invité à un événement',
       'event-notification': 'Notification d\'événement',
       'ticket-reminder': 'Rappel de votre événement'
     };
@@ -950,10 +983,11 @@ class EmailService {
    */
   getStats() {
     return {
+      mockDeliveryEnabled: isMockEmailDeliveryEnabled(),
       providers: {
         smtp: {
           configured: this.smtpConfigured,
-          host: process.env.SMTP_HOST,
+          host: sanitizeProviderValue(process.env.SMTP_HOST),
           port: process.env.SMTP_PORT
         },
         sendgrid: {

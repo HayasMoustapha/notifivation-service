@@ -30,6 +30,8 @@ const logger = require('./utils/logger'); // Utilitaire de logging technique
 const healthRoutes = require('./health/health.routes'); // Routes de santé
 const notificationsRoutes = require('./api/routes/notifications.routes'); // Routes de notifications
 const bootstrap = require('./bootstrap'); // Initialisation de la base de données
+const emailService = require('./core/email/email.service');
+const smsService = require('./core/sms/sms.service');
 
 /**
  * CLASSE SERVEUR NOTIFICATION
@@ -159,6 +161,13 @@ class NotificationServer {
 
     // 📊 ROUTE INFO : Informations sur le service (pour monitoring)
     this.app.get('/api/info', (req, res) => {
+      const emailStats = emailService.getStats();
+      const smsStats = smsService.getStats();
+      const emailConfigured =
+        emailStats.providers.smtp.configured || emailStats.providers.sendgrid.configured;
+      const smsConfigured =
+        smsStats.providers.twilio.configured || smsStats.providers.vonage.configured;
+
       res.json({
         service: 'Notification Service',
         version: '2.0.0',
@@ -167,11 +176,12 @@ class NotificationServer {
         uptime: process.uptime(),
         timestamp: new Date().toISOString(),
         capabilities: {
-          email: !!process.env.SENDGRID_API_KEY,
-          sms: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
+          email: emailConfigured,
+          sms: smsConfigured,
           bulk: true,
           queue: !!process.env.REDIS_URL,
-          templates: true
+          templates: true,
+          mockEmailDelivery: emailStats.mockDeliveryEnabled === true
         }
       });
     });
