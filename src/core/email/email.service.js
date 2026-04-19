@@ -636,7 +636,7 @@ class EmailService {
             : null;
     const primaryLabel =
       template === 'event-invitation'
-        ? 'Voir l invitation'
+        ? "Voir l'invitation"
         : data.ticketDownloadUrl
           ? 'Telecharger'
           : 'Ouvrir';
@@ -646,6 +646,17 @@ class EmailService {
         : data.responseUrl && data.responseUrl === secondaryUrl
           ? 'Repondre'
           : 'Se connecter';
+    const eventName = data.eventName || data.eventTitle || options.eventName || null;
+    const eventDate = data.eventDate || options.eventDate || null;
+    const eventLocation = data.eventLocation || options.eventLocation || null;
+    const description = data.description || options.description || null;
+    const message = data.message || options.message || null;
+    const organizer = data.organizerName || data.senderName || options.organizerName || null;
+    const amount = data.amount || options.amount || null;
+    const transactionId = data.transactionId || data.paymentReference || options.transactionId || null;
+    const ticketCount = data.ticketCount || options.ticketCount || null;
+    const acceptUrl = data.acceptUrl || null;
+    const declineUrl = data.declineUrl || null;
     
     return `
 <!DOCTYPE html>
@@ -670,42 +681,44 @@ class EmailService {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎉 Event Planner</h1>
+            <h1>Event Planner</h1>
             <h2>${subject}</h2>
         </div>
         
         <div class="content">
             <p>Bonjour ${firstName},</p>
-            <p>Ceci est une notification concernant votre compte Event Planner.</p>
-            <p>Type de notification: <strong>${template}</strong></p>
-            
-            ${data.description ? `<p>Description: ${data.description}</p>` : ''}
-            ${data.amount ? `<p>Montant: ${data.amount} ${data.currency || 'EUR'}</p>` : ''}
-            ${data.eventName ? `<p>Événement: ${data.eventName}</p>` : ''}
-            ${data.transactionId ? `<p>Transaction: ${data.transactionId}</p>` : ''}
-            ${data.ticketCount ? `<p>Tickets: ${data.ticketCount}</p>` : ''}
-            ${data.message ? `<p>${data.message}</p>` : ''}
-            
-            ${primaryUrl ? `
-            <div class="actions">
-                <a class="button" href="${primaryUrl}">${primaryLabel}</a>
-                ${secondaryUrl ? `<a class="button button-secondary" href="${secondaryUrl}">${secondaryLabel}</a>` : ''}
-            </div>` : ''}
-
-            ${(primaryUrl || secondaryUrl) ? `
-            <div class="link-box">
-                ${primaryUrl ? `<p class="link-row"><strong>Lien principal :</strong> <a href="${primaryUrl}">${primaryUrl}</a></p>` : ''}
-                ${secondaryUrl ? `<p class="link-row"><strong>Lien secondaire :</strong> <a href="${secondaryUrl}">${secondaryUrl}</a></p>` : ''}
-                ${data.acceptUrl ? `<p class="link-row"><strong>Accepter :</strong> <a href="${data.acceptUrl}">${data.acceptUrl}</a></p>` : ''}
-                ${data.declineUrl ? `<p class="link-row"><strong>Decliner :</strong> <a href="${data.declineUrl}">${data.declineUrl}</a></p>` : ''}
-            </div>` : ''}
-            
-            <p>Pour plus d'informations, connectez-vous à votre compte Event Planner.</p>
+            <p>Vous avez recu une notification de la plateforme Event Planner.</p>
+            ${eventName ? `<p><strong>Evenement :</strong> ${eventName}</p>` : ''}
+            ${eventDate ? `<p><strong>Date :</strong> ${eventDate}</p>` : ''}
+            ${eventLocation ? `<p><strong>Lieu :</strong> ${eventLocation}</p>` : ''}
+            ${organizer ? `<p><strong>Organisateur :</strong> ${organizer}</p>` : ''}
+            ${description ? `<p><strong>Description :</strong> ${description}</p>` : ''}
+            ${amount ? `<p><strong>Montant :</strong> ${amount}</p>` : ''}
+            ${transactionId ? `<p><strong>Reference :</strong> ${transactionId}</p>` : ''}
+            ${ticketCount ? `<p><strong>Nombre de tickets :</strong> ${ticketCount}</p>` : ''}
+            ${message ? `<p><strong>Message :</strong> ${message}</p>` : ''}
+            <p>Utilisez les liens ci-dessous pour ouvrir votre invitation, telecharger votre ticket ou repondre a cette notification.</p>
         </div>
-        
+
+        ${(primaryUrl || secondaryUrl || acceptUrl || declineUrl) ? `
+        <div class="actions">
+            ${primaryUrl ? `<a class="button" href="${primaryUrl}" target="_blank" rel="noopener noreferrer">${primaryLabel}</a>` : ''}
+            ${secondaryUrl ? `<a class="button button-secondary" href="${secondaryUrl}" target="_blank" rel="noopener noreferrer">${secondaryLabel}</a>` : ''}
+            ${acceptUrl ? `<a class="button" href="${acceptUrl}" target="_blank" rel="noopener noreferrer">Accepter</a>` : ''}
+            ${declineUrl ? `<a class="button button-secondary" href="${declineUrl}" target="_blank" rel="noopener noreferrer">Decliner</a>` : ''}
+        </div>` : ''}
+
+        ${(primaryUrl || secondaryUrl || acceptUrl || declineUrl) ? `
+        <div class="link-box">
+            ${primaryUrl ? `<div class="link-row"><strong>${primaryLabel} :</strong> <a href="${primaryUrl}" target="_blank" rel="noopener noreferrer">${primaryUrl}</a></div>` : ''}
+            ${secondaryUrl ? `<div class="link-row"><strong>${secondaryLabel} :</strong> <a href="${secondaryUrl}" target="_blank" rel="noopener noreferrer">${secondaryUrl}</a></div>` : ''}
+            ${acceptUrl ? `<div class="link-row"><strong>Accepter :</strong> <a href="${acceptUrl}" target="_blank" rel="noopener noreferrer">${acceptUrl}</a></div>` : ''}
+            ${declineUrl ? `<div class="link-row"><strong>Decliner :</strong> <a href="${declineUrl}" target="_blank" rel="noopener noreferrer">${declineUrl}</a></div>` : ''}
+        </div>` : ''}
+
         <div class="footer">
-            <p>Merci de votre confiance dans Event Planner.</p>
-            <p>© 2024 Event Planner. Tous droits réservés.</p>
+            <p>Si vous n'arrivez pas a cliquer sur un bouton, copiez le lien correspondant dans votre navigateur.</p>
+            <p>&copy; 2024 Event Planner. Tous droits reserves.</p>
         </div>
     </div>
 </body>

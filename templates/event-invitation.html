@@ -1,264 +1,374 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vous Ãªtes invitÃ© Ã  {{eventName}} !</title>
+    <title>Invitation pour {{eventName}}</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
+            margin: 0;
+            padding: 0;
+            background: #f4f7fb;
+            color: #16202a;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .shell {
+            width: 100%;
+            padding: 28px 12px;
+            box-sizing: border-box;
+        }
+        .card {
+            max-width: 680px;
             margin: 0 auto;
-            padding: 20px;
-            background-color: #f4f4f4;
+            background: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #d8e2ee;
+            box-shadow: 0 18px 42px rgba(12, 29, 52, 0.08);
         }
-        .container {
-            background-color: #ffffff;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        .hero {
+            padding: 32px 36px 24px;
+            background: linear-gradient(135deg, #0f62fe 0%, #6f42c1 100%);
+            color: #ffffff;
         }
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #6f42c1;
-            padding-bottom: 20px;
-        }
-        .logo {
-            font-size: 28px;
-            font-weight: bold;
-            color: #007bff;
-            margin-bottom: 10px;
-        }
-        .invitation-icon {
-            font-size: 48px;
-            color: #6f42c1;
-            margin-bottom: 20px;
-        }
-        .content {
-            margin-bottom: 30px;
-        }
-        .invitation-title {
-            font-size: 24px;
-            color: #6f42c1;
-            margin-bottom: 20px;
-            font-weight: 600;
-            text-align: center;
-        }
-        .event-info {
-            background-color: #f8f9fa;
-            border-left: 4px solid #6f42c1;
-            padding: 15px;
-            margin: 20px 0;
-        }
-        .invitation-message {
-            background-color: #e7f3ff;
-            border: 1px solid #b3d9ff;
-            border-radius: 5px;
-            padding: 15px;
-            margin: 20px 0;
-        }
-        .cta-button {
+        .eyebrow {
             display: inline-block;
-            background-color: #6f42c1;
-            color: white;
-            padding: 12px 30px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.16);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .hero h1 {
+            margin: 18px 0 10px;
+            font-size: 30px;
+            line-height: 1.2;
+        }
+        .hero p {
+            margin: 0;
+            font-size: 16px;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.92);
+        }
+        .section {
+            padding: 28px 36px 0;
+        }
+        .section h2 {
+            margin: 0 0 14px;
+            font-size: 18px;
+            line-height: 1.3;
+            color: #0b1f33;
+        }
+        .section p {
+            margin: 0 0 14px;
+            font-size: 15px;
+            line-height: 1.7;
+            color: #33475b;
+        }
+        .panel {
+            margin-top: 18px;
+            padding: 18px 20px;
+            border-radius: 10px;
+            background: #f8fbff;
+            border: 1px solid #d6e6ff;
+        }
+        .panel strong {
+            color: #0b1f33;
+        }
+        .grid {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .grid td {
+            padding: 10px 0;
+            vertical-align: top;
+            border-bottom: 1px solid #e7eef6;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+        .grid tr:last-child td {
+            border-bottom: 0;
+        }
+        .label {
+            width: 180px;
+            color: #5c7288;
+            font-weight: 700;
+        }
+        .value {
+            color: #16202a;
+        }
+        .actions {
+            padding: 30px 36px 10px;
+            text-align: center;
+        }
+        .button {
+            display: inline-block;
+            margin: 6px;
+            padding: 14px 22px;
+            border-radius: 8px;
             text-decoration: none;
-            border-radius: 5px;
-            font-weight: bold;
-            margin: 10px 5px;
+            font-size: 15px;
+            font-weight: 700;
         }
-        .secondary-button {
-            background-color: #6c757d;
+        .button-primary {
+            background: #0f62fe;
+            color: #ffffff;
         }
-        .success-button {
-            background-color: #198754;
+        .button-success {
+            background: #198754;
+            color: #ffffff;
+        }
+        .button-muted {
+            background: #eef3f8;
+            color: #233547;
+        }
+        .link-box {
+            margin: 18px 36px 0;
+            padding: 18px 20px;
+            border-radius: 10px;
+            background: #f7f9fc;
+            border: 1px solid #dde6ef;
+        }
+        .link-row {
+            margin: 0 0 10px;
+            font-size: 14px;
+            line-height: 1.6;
+            word-break: break-word;
+        }
+        .link-row:last-child {
+            margin-bottom: 0;
         }
         .footer {
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-            color: #666;
-            font-size: 14px;
+            padding: 28px 36px 36px;
+            font-size: 13px;
+            line-height: 1.7;
+            color: #6a7f94;
         }
-        .organizer-info {
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
-            border-radius: 5px;
-            padding: 15px;
-            margin: 20px 0;
+        .footer a {
+            color: #0f62fe;
         }
-        .rsvp-section {
-            background-color: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 5px;
-            padding: 15px;
-            margin: 20px 0;
-            text-align: center;
+        a {
+            color: #0f62fe;
+        }
+        @media (max-width: 640px) {
+            .hero,
+            .section,
+            .actions,
+            .footer {
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+            .link-box {
+                margin-left: 20px;
+                margin-right: 20px;
+            }
+            .label,
+            .value,
+            .grid td {
+                display: block;
+                width: 100%;
+            }
+            .label {
+                padding-bottom: 2px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">ðŸŽ‰ Event Planner</div>
-            <div class="invitation-icon">ðŸ’Œ</div>
-            <h1>Vous Ãªtes invitÃ© !</h1>
-        </div>
-        
-        <div class="content">
-            <p class="invitation-title">
-                {{firstName}}, vous Ãªtes invitÃ© Ã  {{eventName}} !
-            </p>
-            
-            <p>
-                {{#if senderName}}
-                {{senderName}} aimerait vous inviter Ã  participer Ã  cet Ã©vÃ©nement spÃ©cial.
-                {{else}}
-                Vous avez Ã©tÃ© sÃ©lectionnÃ© pour participer Ã  cet Ã©vÃ©nement exclusif.
+    <div class="shell">
+        <div class="card">
+            <div class="hero">
+                <div class="eyebrow">Event Planner</div>
+                <h1>Vous &ecirc;tes invit&eacute;{{#if firstName}}, {{firstName}}{{/if}}</h1>
+                <p>
+                    Votre invitation pour <strong>{{eventName}}</strong> est pr&ecirc;te.
+                    Retrouvez ci-dessous les informations utiles, les liens d'acc&egrave;s et votre billet si l'&eacute;v&eacute;nement est gratuit.
+                </p>
+            </div>
+
+            <div class="section">
+                <h2>Invitation</h2>
+                <p>
+                    {{#if senderName}}
+                    <strong>{{senderName}}</strong> vous invite &agrave; participer &agrave; cet &eacute;v&eacute;nement.
+                    {{else}}
+                    Vous avez &eacute;t&eacute; ajout&eacute; &agrave; la liste des invit&eacute;s pour cet &eacute;v&eacute;nement.
+                    {{/if}}
+                </p>
+                {{#if message}}
+                <div class="panel">
+                    <strong>Message personnel</strong>
+                    <p style="margin:10px 0 0;">{{message}}</p>
+                </div>
                 {{/if}}
-            </p>
-            
-            <div class="invitation-message">
-                <h3>ðŸ“ Message Personnel</h3>
-                <p>{{message}}</p>
             </div>
-            
-            <div class="event-info">
-                <h3>ðŸ“… DÃ©tails de l'Ã‰vÃ©nement</h3>
-                <p>
-                    <strong>Nom de l'Ã©vÃ©nement :</strong> {{eventName}}<br>
-                    <strong>Date :</strong> {{eventDate}}<br>
-                    {{#if eventTime}}
-                    <strong>Heure :</strong> {{eventTime}}<br>
-                    {{/if}}
-                    <strong>Lieu :</strong> {{eventLocation}}<br>
-                    {{#if eventType}}
-                    <strong>Type d'Ã©vÃ©nement :</strong> {{eventType}}<br>
-                    {{/if}}
-                    {{#if capacity}}
-                    <strong>CapacitÃ© :</strong> {{capacity}} participants<br>
-                    {{/if}}
-                </p>
+
+            <div class="section">
+                <h2>D&eacute;tails de l'&eacute;v&eacute;nement</h2>
+                <div class="panel">
+                    <table class="grid" role="presentation">
+                        <tr>
+                            <td class="label">Nom</td>
+                            <td class="value">{{eventName}}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">Date</td>
+                            <td class="value">{{eventDate}}</td>
+                        </tr>
+                        {{#if eventTime}}
+                        <tr>
+                            <td class="label">Heure</td>
+                            <td class="value">{{eventTime}}</td>
+                        </tr>
+                        {{/if}}
+                        <tr>
+                            <td class="label">Lieu</td>
+                            <td class="value">{{eventLocation}}</td>
+                        </tr>
+                        {{#if eventType}}
+                        <tr>
+                            <td class="label">Type</td>
+                            <td class="value">{{eventType}}</td>
+                        </tr>
+                        {{/if}}
+                        {{#if capacity}}
+                        <tr>
+                            <td class="label">Capacit&eacute;</td>
+                            <td class="value">{{capacity}} participants</td>
+                        </tr>
+                        {{/if}}
+                    </table>
+                </div>
             </div>
-            
+
             {{#if organizerName}}
-            <div class="organizer-info">
-                <h3>ðŸ‘¤ Organisateur</h3>
-                <p>
-                    <strong>Nom :</strong> {{organizerName}}<br>
-                    {{#if organizerEmail}}
-                    <strong>Email :</strong> {{organizerEmail}}<br>
-                    {{/if}}
-                    {{#if organizerPhone}}
-                    <strong>TÃ©lÃ©phone :</strong> {{organizerPhone}}<br>
-                    {{/if}}
-                </p>
+            <div class="section">
+                <h2>Organisateur</h2>
+                <div class="panel">
+                    <table class="grid" role="presentation">
+                        <tr>
+                            <td class="label">Nom</td>
+                            <td class="value">{{organizerName}}</td>
+                        </tr>
+                        {{#if organizerEmail}}
+                        <tr>
+                            <td class="label">Email</td>
+                            <td class="value"><a href="mailto:{{organizerEmail}}">{{organizerEmail}}</a></td>
+                        </tr>
+                        {{/if}}
+                        {{#if organizerPhone}}
+                        <tr>
+                            <td class="label">T&eacute;l&eacute;phone</td>
+                            <td class="value">{{organizerPhone}}</td>
+                        </tr>
+                        {{/if}}
+                    </table>
+                </div>
             </div>
             {{/if}}
 
             {{#if loginUrl}}
-            <div class="event-info">
-                <h3>ðŸ” AccÃ¨s Ã  la plateforme</h3>
-                <p>
-                    Connectez-vous a la plateforme depuis ce lien securise :<br>
-                    <a href="{{loginUrl}}">{{loginUrl}}</a><br>
+            <div class="section">
+                <h2>Acc&egrave;s &agrave; la plateforme</h2>
+                <div class="panel">
+                    <p style="margin:0 0 10px;">
+                        Utilisez ce lien pour acc&eacute;der directement &agrave; la plateforme :
+                        <a href="{{loginUrl}}">{{loginUrl}}</a>
+                    </p>
                     {{#if defaultPassword}}
-                    <strong>Mot de passe temporaire :</strong> {{defaultPassword}}<br>
+                    <p style="margin:0;">
+                        <strong>Mot de passe temporaire :</strong> {{defaultPassword}}
+                    </p>
                     {{/if}}
-                </p>
-                <div style="margin-top: 12px;">
-                    <a href="{{loginUrl}}" class="cta-button">Se connecter</a>
                 </div>
             </div>
             {{/if}}
-
 
             {{#if ticketAccessUrl}}
-            <div class="event-info">
-                <h3>ðŸŽ« Votre billet</h3>
-                <p>
+            <div class="section">
+                <h2>Billet et acc&egrave;s</h2>
+                <div class="panel">
                     {{#if isFreeEvent}}
-                    L'Ã©vÃ©nement est gratuit. Vous pouvez tÃ©lÃ©charger votre billet ici :<br>
-                    {{#if ticketDownloadUrl}}
-                    <a href="{{ticketDownloadUrl}}">{{ticketDownloadUrl}}</a><br>
-                    {{/if}}
+                    <p style="margin:0;">
+                        Votre billet peut &ecirc;tre t&eacute;l&eacute;charg&eacute; imm&eacute;diatement.
+                        {{#if ticketDownloadUrl}}
+                        <a href="{{ticketDownloadUrl}}">{{ticketDownloadUrl}}</a>
+                        {{/if}}
+                    </p>
                     {{else}}
-                    L'Ã©vÃ©nement est payant. Achetez votre billet ici :<br>
-                    <a href="{{ticketAccessUrl}}">{{ticketAccessUrl}}</a><br>
-                    {{/if}}
-                </p>
-                <div style="margin-top: 12px;">
-                    {{#if isFreeEvent}}
-                    {{#if ticketDownloadUrl}}
-                    <a href="{{ticketDownloadUrl}}" class="cta-button success-button">Telecharger mon billet</a>
-                    {{/if}}
-                    {{else}}
-                    <a href="{{ticketAccessUrl}}" class="cta-button success-button">Acceder au billet</a>
+                    <p style="margin:0;">
+                        Cet &eacute;v&eacute;nement est payant. Utilisez ce lien pour finaliser votre acc&egrave;s :
+                        <a href="{{ticketAccessUrl}}">{{ticketAccessUrl}}</a>
+                    </p>
                     {{/if}}
                 </div>
             </div>
             {{/if}}
-            
-            <div class="rsvp-section">
-                <h3>âœ… Votre rÃ©ponse est attendue</h3>
-                <p>
-                    {{#if rsvpDeadline}}
-                    Merci de rÃ©pondre avant le {{rsvpDeadline}}.
-                    {{else}}
-                    Votre rÃ©ponse nous aidera Ã  mieux organiser l'Ã©vÃ©nement.
+
+            <div class="actions">
+                {{#if acceptUrl}}
+                <a href="{{acceptUrl}}" class="button button-primary">Accepter l'invitation</a>
+                {{/if}}
+                {{#if declineUrl}}
+                <a href="{{declineUrl}}" class="button button-muted">D&eacute;cliner</a>
+                {{/if}}
+                {{#if maybeUrl}}
+                <a href="{{maybeUrl}}" class="button button-muted">Peut-&ecirc;tre</a>
+                {{/if}}
+                {{#if isFreeEvent}}
+                    {{#if ticketDownloadUrl}}
+                <a href="{{ticketDownloadUrl}}" class="button button-success">T&eacute;l&eacute;charger le billet</a>
                     {{/if}}
+                {{else}}
+                    {{#if ticketAccessUrl}}
+                <a href="{{ticketAccessUrl}}" class="button button-success">Acc&eacute;der au billet</a>
+                    {{/if}}
+                {{/if}}
+                {{#if frontendUrl}}
+                    {{#if eventId}}
+                <a href="{{frontendUrl}}/events/{{eventId}}" class="button button-muted">Voir l'&eacute;v&eacute;nement</a>
+                    {{/if}}
+                {{/if}}
+            </div>
+
+            {{#if rsvpDeadline}}
+            <div class="link-box">
+                <p class="link-row">
+                    <strong>R&eacute;ponse attendue avant :</strong> {{rsvpDeadline}}
                 </p>
-                
-                <div style="text-align: center;">
-                    {{#if acceptUrl}}
-                    <a href="{{acceptUrl}}" class="cta-button">âœ… Accepter l'Invitation</a>
-                    {{/if}}
-                    {{#if declineUrl}}
-                    <a href="{{declineUrl}}" class="cta-button secondary-button">âŒ DÃ©cliner</a>
-                    {{/if}}
-                    {{#if maybeUrl}}
-                    <a href="{{maybeUrl}}" class="cta-button secondary-button">ðŸ¤” Peut-Ãªtre</a>
-                    {{/if}}
-                </div>
-            </div>
-            
-            {{#if additionalInfo}}
-            <div class="event-info">
-                <h3>â„¹ï¸ Informations SupplÃ©mentaires</h3>
-                <p>{{additionalInfo}}</p>
             </div>
             {{/if}}
-            
-            <div style="text-align: center;">
-                <a href="{{frontendUrl}}/events/{{eventId}}" class="cta-button">ðŸ“‹ Voir les DÃ©tails</a>
-                <a href="{{frontendUrl}}/calendar/add/{{eventId}}" class="cta-button">ðŸ“… Ajouter au Calendrier</a>
+
+            <div class="link-box">
+                {{#if loginUrl}}
+                <p class="link-row"><strong>Connexion :</strong> <a href="{{loginUrl}}">{{loginUrl}}</a></p>
+                {{/if}}
+                {{#if ticketAccessUrl}}
+                <p class="link-row"><strong>Acc&egrave;s billet :</strong> <a href="{{ticketAccessUrl}}">{{ticketAccessUrl}}</a></p>
+                {{/if}}
+                {{#if ticketDownloadUrl}}
+                <p class="link-row"><strong>T&eacute;l&eacute;chargement billet :</strong> <a href="{{ticketDownloadUrl}}">{{ticketDownloadUrl}}</a></p>
+                {{/if}}
+                {{#if acceptUrl}}
+                <p class="link-row"><strong>Accepter :</strong> <a href="{{acceptUrl}}">{{acceptUrl}}</a></p>
+                {{/if}}
+                {{#if declineUrl}}
+                <p class="link-row"><strong>D&eacute;cliner :</strong> <a href="{{declineUrl}}">{{declineUrl}}</a></p>
+                {{/if}}
             </div>
-        </div>
-        
-        <div class="footer">
-            <p>
-                Nous espÃ©rons vous voir Ã  l'Ã©vÃ©nement !<br>
-                Pour toute question, n'hÃ©sitez pas Ã  nous contacter.
-            </p>
-            
-            {{#if organizerName}}
-            <p style="margin-top: 20px;">
-                Cordialement,<br>
-                <strong>{{organizerName}}</strong><br>
-                Organisateur de l'Ã©vÃ©nement
-            </p>
-            {{/if}}
-            
-            <p style="margin-top: 20px; font-size: 12px;">
-                Â© 2024 Event Planner. Tous droits rÃ©servÃ©s.<br>
-                Vous recevez cet email car vous avez Ã©tÃ© invitÃ© Ã  "{{eventName}}".
-            </p>
+
+            <div class="footer">
+                <p>
+                    Nous esp&eacute;rons vous compter parmi les participants.
+                    Pour toute question, utilisez les coordonn&eacute;es de l'organisateur ou connectez-vous &agrave; votre espace.
+                </p>
+                <p>
+                    &copy; 2024 Event Planner. Vous recevez cet email parce que vous avez &eacute;t&eacute; invit&eacute; &agrave; <strong>{{eventName}}</strong>.
+                </p>
+            </div>
         </div>
     </div>
 </body>
 </html>
-
