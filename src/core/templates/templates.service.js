@@ -6,6 +6,7 @@
 
 const { getDatabase } = require('../../config/database');
 const logger = require('../../utils/logger');
+const { renderTemplateContent } = require('./template-renderer');
 
 class NotificationTemplatesService {
   constructor() {
@@ -275,15 +276,8 @@ class NotificationTemplatesService {
    */
   async renderTemplate(template, data = {}) {
     try {
-      let subject = template.subject_template || '';
-      let body = template.body_template || '';
-
-      // Remplacement simple {{variable}}
-      for (const [key, value] of Object.entries(data)) {
-        const regex = new RegExp(`{{${key}}}`, 'g');
-        subject = subject.replace(regex, value || '');
-        body = body.replace(regex, value || '');
-      }
+      const subject = renderTemplateContent(template.subject_template || '', data);
+      const body = renderTemplateContent(template.body_template || '', data);
 
       // Pour les emails: body est traité comme HTML, on génère aussi une version texte
       // Pour les SMS: body est du texte brut

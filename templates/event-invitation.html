@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vous êtes invité à {{eventName}} !</title>
+    <title>Vous Ãªtes invitÃ© Ã  {{eventName}} !</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -73,6 +73,9 @@
         .secondary-button {
             background-color: #6c757d;
         }
+        .success-button {
+            background-color: #198754;
+        }
         .footer {
             text-align: center;
             margin-top: 30px;
@@ -101,57 +104,57 @@
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">🎉 Event Planner</div>
-            <div class="invitation-icon">💌</div>
-            <h1>Vous êtes invité !</h1>
+            <div class="logo">ðŸŽ‰ Event Planner</div>
+            <div class="invitation-icon">ðŸ’Œ</div>
+            <h1>Vous Ãªtes invitÃ© !</h1>
         </div>
         
         <div class="content">
             <p class="invitation-title">
-                {{firstName}}, vous êtes invité à {{eventName}} !
+                {{firstName}}, vous Ãªtes invitÃ© Ã  {{eventName}} !
             </p>
             
             <p>
                 {{#if senderName}}
-                {{senderName}} aimerait vous inviter à participer à cet événement spécial.
+                {{senderName}} aimerait vous inviter Ã  participer Ã  cet Ã©vÃ©nement spÃ©cial.
                 {{else}}
-                Vous avez été sélectionné pour participer à cet événement exclusif.
+                Vous avez Ã©tÃ© sÃ©lectionnÃ© pour participer Ã  cet Ã©vÃ©nement exclusif.
                 {{/if}}
             </p>
             
             <div class="invitation-message">
-                <h3>📝 Message Personnel</h3>
+                <h3>ðŸ“ Message Personnel</h3>
                 <p>{{message}}</p>
             </div>
             
             <div class="event-info">
-                <h3>📅 Détails de l'Événement</h3>
+                <h3>ðŸ“… DÃ©tails de l'Ã‰vÃ©nement</h3>
                 <p>
-                    <strong>Nom de l'événement :</strong> {{eventName}}<br>
+                    <strong>Nom de l'Ã©vÃ©nement :</strong> {{eventName}}<br>
                     <strong>Date :</strong> {{eventDate}}<br>
                     {{#if eventTime}}
                     <strong>Heure :</strong> {{eventTime}}<br>
                     {{/if}}
                     <strong>Lieu :</strong> {{eventLocation}}<br>
                     {{#if eventType}}
-                    <strong>Type d'événement :</strong> {{eventType}}<br>
+                    <strong>Type d'Ã©vÃ©nement :</strong> {{eventType}}<br>
                     {{/if}}
                     {{#if capacity}}
-                    <strong>Capacité :</strong> {{capacity}} participants<br>
+                    <strong>CapacitÃ© :</strong> {{capacity}} participants<br>
                     {{/if}}
                 </p>
             </div>
             
             {{#if organizerName}}
             <div class="organizer-info">
-                <h3>👤 Organisateur</h3>
+                <h3>ðŸ‘¤ Organisateur</h3>
                 <p>
                     <strong>Nom :</strong> {{organizerName}}<br>
                     {{#if organizerEmail}}
                     <strong>Email :</strong> {{organizerEmail}}<br>
                     {{/if}}
                     {{#if organizerPhone}}
-                    <strong>Téléphone :</strong> {{organizerPhone}}<br>
+                    <strong>TÃ©lÃ©phone :</strong> {{organizerPhone}}<br>
                     {{/if}}
                 </p>
             </div>
@@ -159,100 +162,103 @@
 
             {{#if loginUrl}}
             <div class="event-info">
-                <h3>🔐 Accès à la plateforme</h3>
+                <h3>ðŸ” AccÃ¨s Ã  la plateforme</h3>
                 <p>
-                    <strong>Lien de connexion :</strong> <a href="{{loginUrl}}">{{loginUrl}}</a><br>
+                    Connectez-vous a la plateforme depuis ce lien securise :<br>
+                    <a href="{{loginUrl}}">{{loginUrl}}</a><br>
                     {{#if defaultPassword}}
                     <strong>Mot de passe temporaire :</strong> {{defaultPassword}}<br>
                     {{/if}}
                 </p>
+                <div style="margin-top: 12px;">
+                    <a href="{{loginUrl}}" class="cta-button">Se connecter</a>
+                </div>
             </div>
             {{/if}}
 
-            {{#if loginUrl}}
-            <div class="event-info">
-                <h3>🔐 Accès à la plateforme</h3>
-                <p>
-                    <strong>Connexion :</strong> <a href="{{loginUrl}}">{{loginUrl}}</a><br>
-                    {{#if defaultPassword}}
-                    <strong>Mot de passe temporaire :</strong> {{defaultPassword}}<br>
-                    {{/if}}
-                </p>
-            </div>
-            {{/if}}
 
             {{#if ticketAccessUrl}}
             <div class="event-info">
-                <h3>🎫 Votre billet</h3>
+                <h3>ðŸŽ« Votre billet</h3>
                 <p>
                     {{#if isFreeEvent}}
-                    L'événement est gratuit. Vous pouvez télécharger votre billet ici :<br>
+                    L'Ã©vÃ©nement est gratuit. Vous pouvez tÃ©lÃ©charger votre billet ici :<br>
                     {{#if ticketDownloadUrl}}
                     <a href="{{ticketDownloadUrl}}">{{ticketDownloadUrl}}</a><br>
                     {{/if}}
                     {{else}}
-                    L'événement est payant. Achetez votre billet ici :<br>
+                    L'Ã©vÃ©nement est payant. Achetez votre billet ici :<br>
                     <a href="{{ticketAccessUrl}}">{{ticketAccessUrl}}</a><br>
                     {{/if}}
                 </p>
+                <div style="margin-top: 12px;">
+                    {{#if isFreeEvent}}
+                    {{#if ticketDownloadUrl}}
+                    <a href="{{ticketDownloadUrl}}" class="cta-button success-button">Telecharger mon billet</a>
+                    {{/if}}
+                    {{else}}
+                    <a href="{{ticketAccessUrl}}" class="cta-button success-button">Acceder au billet</a>
+                    {{/if}}
+                </div>
             </div>
             {{/if}}
             
             <div class="rsvp-section">
-                <h3>✅ Votre réponse est attendue</h3>
+                <h3>âœ… Votre rÃ©ponse est attendue</h3>
                 <p>
                     {{#if rsvpDeadline}}
-                    Merci de répondre avant le {{rsvpDeadline}}.
+                    Merci de rÃ©pondre avant le {{rsvpDeadline}}.
                     {{else}}
-                    Votre réponse nous aidera à mieux organiser l'événement.
+                    Votre rÃ©ponse nous aidera Ã  mieux organiser l'Ã©vÃ©nement.
                     {{/if}}
                 </p>
                 
                 <div style="text-align: center;">
                     {{#if acceptUrl}}
-                    <a href="{{acceptUrl}}" class="cta-button">✅ Accepter l'Invitation</a>
+                    <a href="{{acceptUrl}}" class="cta-button">âœ… Accepter l'Invitation</a>
                     {{/if}}
                     {{#if declineUrl}}
-                    <a href="{{declineUrl}}" class="cta-button secondary-button">❌ Décliner</a>
+                    <a href="{{declineUrl}}" class="cta-button secondary-button">âŒ DÃ©cliner</a>
                     {{/if}}
                     {{#if maybeUrl}}
-                    <a href="{{maybeUrl}}" class="cta-button secondary-button">🤔 Peut-être</a>
+                    <a href="{{maybeUrl}}" class="cta-button secondary-button">ðŸ¤” Peut-Ãªtre</a>
                     {{/if}}
                 </div>
             </div>
             
             {{#if additionalInfo}}
             <div class="event-info">
-                <h3>ℹ️ Informations Supplémentaires</h3>
+                <h3>â„¹ï¸ Informations SupplÃ©mentaires</h3>
                 <p>{{additionalInfo}}</p>
             </div>
             {{/if}}
             
             <div style="text-align: center;">
-                <a href="{{frontendUrl}}/events/{{eventId}}" class="cta-button">📋 Voir les Détails</a>
-                <a href="{{frontendUrl}}/calendar/add/{{eventId}}" class="cta-button">📅 Ajouter au Calendrier</a>
+                <a href="{{frontendUrl}}/events/{{eventId}}" class="cta-button">ðŸ“‹ Voir les DÃ©tails</a>
+                <a href="{{frontendUrl}}/calendar/add/{{eventId}}" class="cta-button">ðŸ“… Ajouter au Calendrier</a>
             </div>
         </div>
         
         <div class="footer">
             <p>
-                Nous espérons vous voir à l'événement !<br>
-                Pour toute question, n'hésitez pas à nous contacter.
+                Nous espÃ©rons vous voir Ã  l'Ã©vÃ©nement !<br>
+                Pour toute question, n'hÃ©sitez pas Ã  nous contacter.
             </p>
             
             {{#if organizerName}}
             <p style="margin-top: 20px;">
                 Cordialement,<br>
                 <strong>{{organizerName}}</strong><br>
-                Organisateur de l'événement
+                Organisateur de l'Ã©vÃ©nement
             </p>
             {{/if}}
             
             <p style="margin-top: 20px; font-size: 12px;">
-                © 2024 Event Planner. Tous droits réservés.<br>
-                Vous recevez cet email car vous avez été invité à "{{eventName}}".
+                Â© 2024 Event Planner. Tous droits rÃ©servÃ©s.<br>
+                Vous recevez cet email car vous avez Ã©tÃ© invitÃ© Ã  "{{eventName}}".
             </p>
         </div>
     </div>
 </body>
 </html>
+

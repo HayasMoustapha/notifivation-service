@@ -37,9 +37,13 @@ const schemas = {
       'event-cancelled',
       'event-reminder',
       'event-invitation',
+      'event_invitation',
       'payment-confirmation',
       'payment-failed',
       'ticket-generated',
+      'ticket_confirmation',
+      'ticket-generation-error',
+      'batch-generation-complete',
       'ticket-purchased',
       'ticket-reminder',
       'security-alert',
@@ -85,10 +89,11 @@ const schemas = {
     template: Joi.string().valid(
       'otp',
       'appointment-reminder',
+      'event-invitation',
       'payment-confirmation',
       'security-alert'
     ).required().messages({
-      'any.only': 'Le template SMS doit être l\'un des suivants: otp, appointment-reminder, payment-confirmation, security-alert',
+      'any.only': 'Le template SMS doit être l\'un des suivants: otp, appointment-reminder, event-invitation, payment-confirmation, security-alert',
       'any.required': 'Le template est requis'
     }),
     data: Joi.object().required().messages({
@@ -127,9 +132,13 @@ const schemas = {
       'payment-confirmation',
       'payment-failed',
       'ticket-generated',
+      'ticket_confirmation',
+      'ticket-generation-error',
+      'batch-generation-complete',
       'ticket-reminder',
       'security-alert',
       'event-invitation',
+      'event_invitation',
       'refund-processed',
       'fraud-detected',
       'daily-scan-report'

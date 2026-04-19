@@ -2,6 +2,19 @@ const Queue = require('bull');
 const crypto = require('crypto');
 const logger = require('../../utils/logger');
 
+function sanitizeRedisPassword(value) {
+  if (!value) {
+    return undefined;
+  }
+
+  const normalized = String(value).trim();
+  if (!normalized || normalized.startsWith('your_')) {
+    return undefined;
+  }
+
+  return normalized;
+}
+
 /**
  * Service de gestion des queues Redis pour les notifications
  * Gère les jobs d'envoi d'emails et SMS en mode asynchrone
@@ -32,7 +45,7 @@ class QueueService {
         redis: {
           port: process.env.REDIS_PORT || 6379,
           host: process.env.REDIS_HOST || 'localhost',
-          password: process.env.REDIS_PASSWORD,
+          password: sanitizeRedisPassword(process.env.REDIS_PASSWORD),
           db: parseInt(process.env.QUEUE_REDIS_URL?.split('/')[3]) || 4
         },
         defaultJobOptions: {
@@ -46,7 +59,7 @@ class QueueService {
         redis: {
           port: process.env.REDIS_PORT || 6379,
           host: process.env.REDIS_HOST || 'localhost',
-          password: process.env.REDIS_PASSWORD,
+          password: sanitizeRedisPassword(process.env.REDIS_PASSWORD),
           db: parseInt(process.env.QUEUE_REDIS_URL?.split('/')[3]) || 4
         },
         defaultJobOptions: {
@@ -60,7 +73,7 @@ class QueueService {
         redis: {
           port: process.env.REDIS_PORT || 6379,
           host: process.env.REDIS_HOST || 'localhost',
-          password: process.env.REDIS_PASSWORD,
+          password: sanitizeRedisPassword(process.env.REDIS_PASSWORD),
           db: parseInt(process.env.QUEUE_REDIS_URL?.split('/')[3]) || 4
         },
         defaultJobOptions: {
@@ -74,7 +87,7 @@ class QueueService {
         redis: {
           port: process.env.REDIS_PORT || 6379,
           host: process.env.REDIS_HOST || 'localhost',
-          password: process.env.REDIS_PASSWORD,
+          password: sanitizeRedisPassword(process.env.REDIS_PASSWORD),
           db: parseInt(process.env.QUEUE_REDIS_URL?.split('/')[3]) || 4
         },
         defaultJobOptions: {
@@ -651,19 +664,33 @@ class QueueService {
   async getQueueStats() {
     try {
       const stats = {};
+      const resolveQueueCount = async (promiseFactory) => {
+        try {
+          const jobs = await Promise.race([
+            promiseFactory(),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Queue stats timeout')), 400),
+            ),
+          ]);
+
+          return Array.isArray(jobs) ? jobs.length : 0;
+        } catch (error) {
+          return 0;
+        }
+      };
       
       for (const [name, queue] of this.queues) {
-        const waiting = await queue.getWaiting();
-        const active = await queue.getActive();
-        const completed = await queue.getCompleted();
-        const failed = await queue.getFailed();
+        const waiting = await resolveQueueCount(() => queue.getWaiting());
+        const active = await resolveQueueCount(() => queue.getActive());
+        const completed = await resolveQueueCount(() => queue.getCompleted());
+        const failed = await resolveQueueCount(() => queue.getFailed());
         
         stats[name] = {
-          waiting: waiting.length,
-          active: active.length,
-          completed: completed.length,
-          failed: failed.length,
-          total: waiting.length + active.length + completed.length + failed.length
+          waiting,
+          active,
+          completed,
+          failed,
+          total: waiting + active + completed + failed
         };
       }
 

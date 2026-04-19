@@ -2,6 +2,19 @@ const Queue = require('bull');
 const redis = require('../config/redis');
 const logger = require('../utils/logger');
 
+function sanitizeRedisPassword(value) {
+  if (!value) {
+    return undefined;
+  }
+
+  const normalized = String(value).trim();
+  if (!normalized || normalized.startsWith('your_')) {
+    return undefined;
+  }
+
+  return normalized;
+}
+
 /**
  * Service de gestion des queues Redis pour les notifications
  * Gère les queues d'email, SMS et notifications en masse
@@ -39,7 +52,7 @@ class NotificationQueueService {
         redis: {
           port: process.env.REDIS_PORT || 6379,
           host: process.env.REDIS_HOST || 'localhost',
-          password: process.env.REDIS_PASSWORD,
+          password: sanitizeRedisPassword(process.env.REDIS_PASSWORD),
           db: parseInt(process.env.QUEUE_REDIS_DB) || 1
         },
         defaultJobOptions: this.jobOptions
@@ -50,7 +63,7 @@ class NotificationQueueService {
         redis: {
           port: process.env.REDIS_PORT || 6379,
           host: process.env.REDIS_HOST || 'localhost',
-          password: process.env.REDIS_PASSWORD,
+          password: sanitizeRedisPassword(process.env.REDIS_PASSWORD),
           db: parseInt(process.env.QUEUE_REDIS_DB) || 1
         },
         defaultJobOptions: this.jobOptions
@@ -61,7 +74,7 @@ class NotificationQueueService {
         redis: {
           port: process.env.REDIS_PORT || 6379,
           host: process.env.REDIS_HOST || 'localhost',
-          password: process.env.REDIS_PASSWORD,
+          password: sanitizeRedisPassword(process.env.REDIS_PASSWORD),
           db: parseInt(process.env.QUEUE_REDIS_DB) || 1
         },
         defaultJobOptions: {
@@ -79,7 +92,7 @@ class NotificationQueueService {
         redis: {
           port: process.env.REDIS_PORT || 6379,
           host: process.env.REDIS_HOST || 'localhost',
-          password: process.env.REDIS_PASSWORD,
+          password: sanitizeRedisPassword(process.env.REDIS_PASSWORD),
           db: parseInt(process.env.QUEUE_REDIS_DB) || 1
         },
         defaultJobOptions: {
