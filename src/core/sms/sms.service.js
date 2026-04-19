@@ -803,8 +803,7 @@ class SMSService {
       }
 
       const overallHealthy = (this.twilioConfigured && results.twilio.status === 'healthy') ||
-                           (this.vonageConfigured && results.vonage.status === 'healthy') ||
-                           (this.textbeltConfigured && results.textbelt.status === 'available');
+                           (this.vonageConfigured && results.vonage.status === 'healthy');
 
       return {
         success: true,
@@ -915,13 +914,13 @@ class SMSService {
 
     if (this.textbeltConfigured) {
       results.textbelt = {
-        success: true,
+        success: false,
         mode: this.getTextbeltApiKey() === 'textbelt' ? 'free-key' : 'api-key',
-        note: 'Send-only provider; live delivery tested during actual SMS sending'
+        note: 'Fallback configured, but live delivery must be verified with an actual send'
       };
     }
 
-    results.overall = results.twilio.success || results.vonage.success || results.textbelt.success;
+    results.overall = results.twilio.success || results.vonage.success;
     return results;
   }
 }

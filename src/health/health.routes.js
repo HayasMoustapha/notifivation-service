@@ -252,8 +252,7 @@ router.get('/providers', async (req, res) => {
           smsStats.providers.textbelt.configured,
         healthy:
           smsStats.providers.twilio.configured ||
-          smsStats.providers.vonage.configured ||
-          smsStats.providers.textbelt.configured
+          smsStats.providers.vonage.configured
       }
     };
 
