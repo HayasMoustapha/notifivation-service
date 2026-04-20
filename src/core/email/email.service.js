@@ -883,6 +883,7 @@ class EmailService {
   getDefaultSubject(template) {
     const subjects = {
       'welcome': 'Bienvenue sur Event Planner !',
+      'email-verification': 'Votre code de verification Event Planner',
       'password-reset': 'Reinitialisation de votre mot de passe',
       'event-confirmation': 'Confirmation de votre inscription',
       'event-invitation': 'Vous etes invite a un evenement',
@@ -908,6 +909,29 @@ class EmailService {
             <p>Merci de vous etre inscrit sur Event Planner.</p>
             <p>Votre compte a ete cree avec succes.</p>
             <p><a href="{{loginUrl}}" style="background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Me connecter</a></p>
+          </div>
+        `
+      },
+      'email-verification': {
+        subject: 'Votre code de verification Event Planner',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937;">
+            <div style="padding: 24px; border: 1px solid #dbe5f0; border-radius: 12px; background: #ffffff;">
+              <p style="margin: 0 0 12px; color: #4b5563;">Bonjour {{firstName}},</p>
+              <h2 style="margin: 0 0 12px; color: #0f172a;">Confirmez votre adresse email</h2>
+              <p style="margin: 0 0 20px; line-height: 1.6;">
+                Utilisez ce code de verification pour finaliser votre inscription sur Event Planner.
+              </p>
+              <div style="margin: 0 0 20px; padding: 18px; text-align: center; border-radius: 10px; background: #eff6ff; border: 1px solid #bfdbfe;">
+                <div style="font-size: 28px; letter-spacing: 8px; font-weight: 700; color: #1d4ed8;">{{otpCode}}</div>
+              </div>
+              <p style="margin: 0 0 8px; line-height: 1.6;">
+                Ce code expire dans {{expiresInMinutes}} minutes.
+              </p>
+              <p style="margin: 0; color: #6b7280; line-height: 1.6;">
+                Si vous n'etes pas a l'origine de cette inscription, ignorez simplement cet email.
+              </p>
+            </div>
           </div>
         `
       },
