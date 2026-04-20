@@ -274,8 +274,8 @@
                 <h2>Acc&egrave;s &agrave; la plateforme</h2>
                 <div class="panel">
                     <p style="margin:0 0 10px;">
-                        Utilisez ce lien pour acc&eacute;der directement &agrave; la plateforme :
-                        <a href="{{loginUrl}}">{{loginUrl}}</a>
+                        Utilisez le bouton ou le lien ci-dessous pour acc&eacute;der directement &agrave; la plateforme :
+                        <a href="{{loginUrl}}">Se connecter &agrave; Event Planner</a>
                     </p>
                     {{#if defaultPassword}}
                     <p style="margin:0;">
@@ -294,13 +294,13 @@
                     <p style="margin:0;">
                         Votre billet peut &ecirc;tre t&eacute;l&eacute;charg&eacute; imm&eacute;diatement.
                         {{#if ticketDownloadUrl}}
-                        <a href="{{ticketDownloadUrl}}">{{ticketDownloadUrl}}</a>
+                        <a href="{{ticketDownloadUrl}}">T&eacute;l&eacute;charger mon billet</a>
                         {{/if}}
                     </p>
                     {{else}}
                     <p style="margin:0;">
                         Cet &eacute;v&eacute;nement est payant. Utilisez ce lien pour finaliser votre acc&egrave;s :
-                        <a href="{{ticketAccessUrl}}">{{ticketAccessUrl}}</a>
+                        <a href="{{ticketAccessUrl}}">Acc&eacute;der au billet</a>
                     </p>
                     {{/if}}
                 </div>
@@ -343,19 +343,19 @@
 
             <div class="link-box">
                 {{#if loginUrl}}
-                <p class="link-row"><strong>Connexion :</strong> <a href="{{loginUrl}}">{{loginUrl}}</a></p>
+                <p class="link-row"><strong>Connexion :</strong> <a href="{{loginUrl}}">Ouvrir la plateforme</a></p>
                 {{/if}}
                 {{#if ticketAccessUrl}}
-                <p class="link-row"><strong>Acc&egrave;s billet :</strong> <a href="{{ticketAccessUrl}}">{{ticketAccessUrl}}</a></p>
+                <p class="link-row"><strong>Acc&egrave;s billet :</strong> <a href="{{ticketAccessUrl}}">Ouvrir le billet</a></p>
                 {{/if}}
                 {{#if ticketDownloadUrl}}
-                <p class="link-row"><strong>T&eacute;l&eacute;chargement billet :</strong> <a href="{{ticketDownloadUrl}}">{{ticketDownloadUrl}}</a></p>
+                <p class="link-row"><strong>T&eacute;l&eacute;chargement billet :</strong> <a href="{{ticketDownloadUrl}}">T&eacute;l&eacute;charger le billet</a></p>
                 {{/if}}
                 {{#if acceptUrl}}
-                <p class="link-row"><strong>Accepter :</strong> <a href="{{acceptUrl}}">{{acceptUrl}}</a></p>
+                <p class="link-row"><strong>Accepter :</strong> <a href="{{acceptUrl}}">Confirmer ma pr&eacute;sence</a></p>
                 {{/if}}
                 {{#if declineUrl}}
-                <p class="link-row"><strong>D&eacute;cliner :</strong> <a href="{{declineUrl}}">{{declineUrl}}</a></p>
+                <p class="link-row"><strong>D&eacute;cliner :</strong> <a href="{{declineUrl}}">Refuser l'invitation</a></p>
                 {{/if}}
             </div>
 

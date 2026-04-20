@@ -710,10 +710,10 @@ class EmailService {
 
         ${(primaryUrl || secondaryUrl || acceptUrl || declineUrl) ? `
         <div class="link-box">
-            ${primaryUrl ? `<div class="link-row"><strong>${primaryLabel} :</strong> <a href="${primaryUrl}" target="_blank" rel="noopener noreferrer">${primaryUrl}</a></div>` : ''}
-            ${secondaryUrl ? `<div class="link-row"><strong>${secondaryLabel} :</strong> <a href="${secondaryUrl}" target="_blank" rel="noopener noreferrer">${secondaryUrl}</a></div>` : ''}
-            ${acceptUrl ? `<div class="link-row"><strong>Accepter :</strong> <a href="${acceptUrl}" target="_blank" rel="noopener noreferrer">${acceptUrl}</a></div>` : ''}
-            ${declineUrl ? `<div class="link-row"><strong>Decliner :</strong> <a href="${declineUrl}" target="_blank" rel="noopener noreferrer">${declineUrl}</a></div>` : ''}
+            ${primaryUrl ? `<div class="link-row"><strong>${primaryLabel} :</strong> <a href="${primaryUrl}" target="_blank" rel="noopener noreferrer">Ouvrir</a></div>` : ''}
+            ${secondaryUrl ? `<div class="link-row"><strong>${secondaryLabel} :</strong> <a href="${secondaryUrl}" target="_blank" rel="noopener noreferrer">Ouvrir</a></div>` : ''}
+            ${acceptUrl ? `<div class="link-row"><strong>Accepter :</strong> <a href="${acceptUrl}" target="_blank" rel="noopener noreferrer">Confirmer ma presence</a></div>` : ''}
+            ${declineUrl ? `<div class="link-row"><strong>Decliner :</strong> <a href="${declineUrl}" target="_blank" rel="noopener noreferrer">Refuser l'invitation</a></div>` : ''}
         </div>` : ''}
 
         <div class="footer">
