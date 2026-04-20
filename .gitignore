@@ -33,3 +33,6 @@ build/
 # Temporary
 tmp/
 .temp/
+
+# Local recovery artifacts
+twilio_2FA_recovery_code.txt
