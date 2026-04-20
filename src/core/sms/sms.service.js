@@ -3,6 +3,7 @@ const twilio = require('twilio');
 const { Vonage } = require('@vonage/server-sdk');
 const logger = require('../../utils/logger');
 const notificationRepository = require('../database/notification.repository');
+const { normalizePhoneNumber } = require('../../utils/phone-normalization');
 
 function sanitizeProviderValue(value) {
   if (value === undefined || value === null) {
@@ -184,6 +185,16 @@ class SMSService {
    */
   async sendSMSWithFallback(phoneNumber, message, options = {}) {
     const startTime = Date.now();
+    const normalizedPhone = this.formatPhoneNumber(phoneNumber);
+    if (!normalizedPhone) {
+      return {
+        success: false,
+        error: 'Aucun numero de telephone valide n a ete fourni.',
+        details: {
+          message: 'Le numero de telephone fourni est vide ou invalide.'
+        }
+      };
+    }
     
     // Essayer Twilio d'abord
     if (this.twilioConfigured) {
@@ -191,13 +202,13 @@ class SMSService {
         const result = await this.twilioClient.messages.create({
           body: message,
           from: process.env.TWILIO_PHONE_NUMBER,
-          to: phoneNumber
+          to: normalizedPhone
         });
         
         const responseTime = Date.now() - startTime;
         
         logger.sms('SMS sent via Twilio', {
-          phoneNumber: this.maskPhoneNumber(phoneNumber),
+          phoneNumber: this.maskPhoneNumber(normalizedPhone),
           messageSid: result.sid,
           status: result.status,
           responseTime,
@@ -213,7 +224,7 @@ class SMSService {
       } catch (error) {
         logger.warn('Twilio failed, trying Vonage', { 
           error: error.message,
-          phoneNumber: this.maskPhoneNumber(phoneNumber)
+          phoneNumber: this.maskPhoneNumber(normalizedPhone)
         });
       }
     }
@@ -222,7 +233,7 @@ class SMSService {
     if (this.vonageConfigured) {
       try {
         const result = await this.vonageClient.sms.send({
-          to: phoneNumber,
+          to: normalizedPhone,
           from: process.env.VONAGE_FROM_NUMBER || 'EventPlanner',
           text: message
         });
@@ -231,7 +242,7 @@ class SMSService {
           const responseTime = Date.now() - startTime;
           
           logger.sms('SMS sent via Vonage', {
-            phoneNumber: this.maskPhoneNumber(phoneNumber),
+            phoneNumber: this.maskPhoneNumber(normalizedPhone),
             messageId: result.messages[0].messageId,
             responseTime,
             provider: 'vonage'
@@ -249,7 +260,7 @@ class SMSService {
       } catch (error) {
         logger.error('Vonage failed', { 
           error: error.message,
-          phoneNumber: this.maskPhoneNumber(phoneNumber)
+          phoneNumber: this.maskPhoneNumber(normalizedPhone)
         });
       }
     }
@@ -271,7 +282,7 @@ class SMSService {
         const result = await axios.post(
           'https://textbelt.com/text',
           {
-            phone: this.formatPhoneNumber(phoneNumber),
+            phone: normalizedPhone,
             message: textbeltMessage,
             key: textbeltKey,
             sender:
@@ -292,7 +303,7 @@ class SMSService {
           const responseTime = Date.now() - startTime;
 
           logger.sms('SMS sent via Textbelt', {
-            phoneNumber: this.maskPhoneNumber(phoneNumber),
+            phoneNumber: this.maskPhoneNumber(normalizedPhone),
             messageId: result.data.textId,
             responseTime,
             provider: 'textbelt',
@@ -312,7 +323,7 @@ class SMSService {
       } catch (error) {
         logger.error('Textbelt failed', {
           error: error.message,
-          phoneNumber: this.maskPhoneNumber(phoneNumber)
+          phoneNumber: this.maskPhoneNumber(normalizedPhone)
         });
       }
     }
@@ -320,7 +331,7 @@ class SMSService {
     // Aucun service disponible
     if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
       logger.warn('SMS fallback - no service configured', {
-        phoneNumber: this.maskPhoneNumber(phoneNumber),
+        phoneNumber: this.maskPhoneNumber(normalizedPhone),
         message: message.substring(0, 50) + '...'
       });
       return { success: false, fallback: true, reason: 'No SMS service configured' };
@@ -733,11 +744,12 @@ class SMSService {
    * @returns {string} NumÃ©ro formatÃ©
    */
   formatPhoneNumber(phoneNumber) {
-    if (!phoneNumber) {
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    if (!normalizedPhone) {
       return '';
     }
     // Supprimer tous les caractÃ¨res non numÃ©riques sauf le +
-    return phoneNumber.replace(/[^\d+]/g, '');
+    return normalizedPhone.replace(/[^\d+]/g, '');
   }
 
   /**
@@ -746,11 +758,12 @@ class SMSService {
    * @returns {string} NumÃ©ro masquÃ©
    */
   maskPhoneNumber(phoneNumber) {
-    if (!phoneNumber || typeof phoneNumber !== 'string' || phoneNumber.length < 4) {
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    if (!normalizedPhone || typeof normalizedPhone !== 'string' || normalizedPhone.length < 4) {
       return '***';
     }
     
-    const formatted = this.formatPhoneNumber(phoneNumber);
+    const formatted = this.formatPhoneNumber(normalizedPhone);
     if (!formatted || formatted.length < 4) {
       return '***';
     }
