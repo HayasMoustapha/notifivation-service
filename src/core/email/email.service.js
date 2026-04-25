@@ -146,6 +146,45 @@ class EmailService {
     );
   }
 
+  isRetryableSmtpError(error) {
+    const code = String(error?.code || '').toUpperCase();
+    const message = String(error?.message || '').toUpperCase();
+
+    return [
+      'ECONNRESET',
+      'ECONNREFUSED',
+      'ECONNECTION',
+      'ETIMEDOUT',
+      'ESOCKET',
+      'EPIPE'
+    ].includes(code) || message.includes('ECONNRESET') || message.includes('TIMEOUT');
+  }
+
+  recreateSmtpTransporter() {
+    if (!this.isSMTPConfigured()) {
+      this.smtpTransporter = null;
+      this.smtpConfigured = false;
+      return;
+    }
+
+    this.smtpTransporter = nodemailer.createTransport({
+      host: sanitizeProviderValue(process.env.SMTP_HOST),
+      port: parseInt(process.env.SMTP_PORT) || 587,
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: sanitizeProviderValue(process.env.SMTP_USER),
+        pass: sanitizeProviderValue(process.env.SMTP_PASS)
+      },
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 100,
+      tls: {
+        rejectUnauthorized: process.env.NODE_ENV === 'production'
+      }
+    });
+    this.smtpConfigured = true;
+  }
+
   /**
    * Charge les templates depuis le système de fichiers
    */
@@ -207,6 +246,40 @@ class EmailService {
           responseTime
         };
       } catch (error) {
+        if (this.isRetryableSmtpError(error)) {
+          logger.warn('SMTP transient failure detected, retrying once with a fresh transporter', {
+            error: error.message,
+            code: error.code || null,
+            to: mailOptions.to
+          });
+
+          try {
+            this.recreateSmtpTransporter();
+            const retryResult = await this.smtpTransporter.sendMail(mailOptions);
+            const responseTime = Date.now() - startTime;
+
+            logger.info('Email sent via SMTP after retry', {
+              to: mailOptions.to,
+              messageId: retryResult.messageId,
+              responseTime,
+              provider: 'smtp'
+            });
+
+            return {
+              success: true,
+              provider: 'smtp',
+              messageId: retryResult.messageId,
+              responseTime
+            };
+          } catch (retryError) {
+            logger.warn('SMTP retry failed, trying SendGrid', {
+              error: retryError.message,
+              code: retryError.code || null,
+              to: mailOptions.to
+            });
+          }
+        }
+
         logger.warn('SMTP failed, trying SendGrid', { 
           error: error.message,
           to: mailOptions.to
