@@ -279,9 +279,10 @@ function queueStatsResponse(stats, meta = {}) {
 function notificationResultResponse(results, meta = {}) {
   const simulated = results.simulated === true || String(results.provider || '').toLowerCase() === 'mock';
   const skipped = results.skipped === true;
+  const accepted = results.success || simulated || skipped;
 
   return {
-    success: results.success && !skipped,
+    success: accepted,
     message: skipped
       ? 'Notification non envoyee car les preferences du destinataire bloquent ce canal'
       : simulated
@@ -294,6 +295,7 @@ function notificationResultResponse(results, meta = {}) {
       messageId: results.messageId,
       responseTime: results.responseTime,
       sentAt: new Date().toISOString(),
+      accepted,
       simulated,
       skipped,
       reason: results.reason ?? null

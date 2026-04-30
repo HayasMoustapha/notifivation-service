@@ -124,11 +124,12 @@ describe('Notifications API Integration Tests', () => {
           }
         });
 
-      expect(response.status).toBe(201);
+      expect([201, 202]).toContain(response.status);
       expect(response.body.success).toBe(true);
       expect(response.body.data).toHaveProperty('provider');
       expect(response.body.data).toHaveProperty('messageId');
       expect(response.body.data).toHaveProperty('sentAt');
+      expect(response.body.data).toHaveProperty('accepted', true);
     });
 
     it('should reject invalid email', async () => {

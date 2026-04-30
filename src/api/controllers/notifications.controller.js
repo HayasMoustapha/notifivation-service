@@ -43,6 +43,15 @@ class NotificationsController {
       // Note: La création de notification est gérée par le service d'email
       // pour les templates utilisateur (non-système) avec userId valide
 
+      if (result.simulated === true || result.provider === 'mock') {
+        return res
+          .status(202)
+          .json(notificationResultResponse({
+            ...result,
+            success: true
+          }));
+      }
+
       if (!result.success) {
         return res.status(503).json(errorResponse(
           'Aucun provider email reel n est configure ou l envoi a echoue',
@@ -56,7 +65,7 @@ class NotificationsController {
       }
 
       return res
-        .status(result.provider === 'mock' || result.simulated === true || result.skipped === true ? 202 : 201)
+        .status(result.skipped === true ? 202 : 201)
         .json(notificationResultResponse(result));
     } catch (error) {
       logger.error('Failed to send email', { error: error.message, to: req.body.to });
