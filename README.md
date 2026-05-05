@@ -44,6 +44,21 @@ curl http://localhost:3002/health
 # Retourne: {"status": "healthy", "service": "notification-service"}
 ```
 
+### Contrat Provider / Readiness
+```bash
+curl http://localhost:3002/health/providers
+curl http://localhost:3002/health/config
+curl http://localhost:3002/health/ready
+```
+
+Les endpoints de santé distinguent désormais explicitement:
+- `runtimeReady`: base locale et Redis réellement joignables
+- `mockAvailable`: un mode mock assumé est disponible pour le canal
+- `configured`: des credentials live exploitables sont présents
+- `liveProved`: un check runtime a réellement validé le provider live
+
+`/health/ready` peut retourner `ready_with_provider_gaps` quand le service local est prêt mais que les providers live restent absents ou non prouvés. Cela évite de masquer les blocages live sans casser le runtime de dev.
+
 ## 📡 API Endpoints
 
 ### 📧 Emails
@@ -98,6 +113,7 @@ TWILIO_AUTH_TOKEN=your-token
 TWILIO_PHONE_NUMBER=+1234567890
 VONAGE_API_KEY=your-api-key
 VONAGE_API_SECRET=your-secret
+MOCK_SMS_DELIVERY=true
 
 # Serveur
 PORT=3002
@@ -144,6 +160,7 @@ curl -X POST http://localhost:3002/api/notifications/sms \
 ### 2. "SMS delivery failed"
 - Vérifier format numéro (+33...)
 - Confirmer solde compte Twilio/Vonage
+- Vérifier `/health/providers` pour savoir si le canal est en `mock_only`, `configured_not_live_proved` ou `live_ready`
 
 ### 3. "Template not found"
 - Vérifier nom template exact

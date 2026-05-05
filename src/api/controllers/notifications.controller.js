@@ -6,6 +6,7 @@ const inAppService = require('../../core/in-app/in-app.service');
 const preferencesService = require('../../core/preferences/preferences.service');
 const templatesService = require('../../core/templates/templates.service');
 const notificationRepository = require('../../core/database/notification.repository');
+const { buildDeliveryMatrix } = require('../../health/provider-readiness');
 const {
   successResponse,
   createdResponse,
@@ -122,6 +123,15 @@ class NotificationsController {
         ip: req.ip
       });
 
+      if (result.simulated === true || result.provider === 'mock') {
+        return res
+          .status(202)
+          .json(notificationResultResponse({
+            ...result,
+            success: true
+          }));
+      }
+
       if (!result.success) {
         return res.status(503).json(errorResponse(
           'Aucun provider SMS reel n est configure ou l envoi a echoue',
@@ -171,7 +181,9 @@ class NotificationsController {
         ip: req.ip
       });
 
-      return res.status(201).json(notificationResultResponse(result));
+      return res
+        .status(result.simulated === true || result.provider === 'mock' ? 202 : 201)
+        .json(notificationResultResponse(result));
     } catch (error) {
       logger.error('Failed to send push notification', { error: error.message });
       return res.status(500).json(errorResponse('Échec de l\'envoi push', null, 'PUSH_SEND_FAILED'));
@@ -553,7 +565,9 @@ class NotificationsController {
     try {
       const { phoneNumber, userData, options = {} } = req.body;
       const result = await smsService.sendWelcomeSMS(phoneNumber, userData, { ...options, ip: req.ip });
-      return res.status(201).json(notificationResultResponse(result));
+      return res
+        .status(result.simulated === true || result.provider === 'mock' ? 202 : 201)
+        .json(notificationResultResponse(result));
     } catch (error) {
       logger.error('Failed to send welcome SMS', { error: error.message });
       return res.status(500).json(errorResponse('Échec SMS de bienvenue', null, 'WELCOME_SMS_FAILED'));
@@ -575,7 +589,9 @@ class NotificationsController {
     try {
       const { phoneNumber, resetCode, options = {} } = req.body;
       const result = await smsService.sendPasswordResetSMS(phoneNumber, resetCode, { ...options, ip: req.ip });
-      return res.status(201).json(notificationResultResponse(result));
+      return res
+        .status(result.simulated === true || result.provider === 'mock' ? 202 : 201)
+        .json(notificationResultResponse(result));
     } catch (error) {
       logger.error('Failed to send password reset SMS', { error: error.message });
       return res.status(500).json(errorResponse('Échec SMS réinitialisation', null, 'PASSWORD_RESET_SMS_FAILED'));
@@ -597,7 +613,9 @@ class NotificationsController {
     try {
       const { phoneNumber, eventData, ticketData, options = {} } = req.body;
       const result = await smsService.sendEventConfirmationSMS(phoneNumber, eventData, ticketData, { ...options, ip: req.ip });
-      return res.status(201).json(notificationResultResponse(result));
+      return res
+        .status(result.simulated === true || result.provider === 'mock' ? 202 : 201)
+        .json(notificationResultResponse(result));
     } catch (error) {
       logger.error('Failed to send event confirmation SMS', { error: error.message });
       return res.status(500).json(errorResponse('Échec SMS confirmation', null, 'EVENT_CONFIRMATION_SMS_FAILED'));
@@ -608,7 +626,9 @@ class NotificationsController {
     try {
       const { phoneNumber, otpCode, purpose, options = {} } = req.body;
       const result = await smsService.sendOTPSMS(phoneNumber, otpCode, purpose, { ...options, ip: req.ip });
-      return res.status(201).json(notificationResultResponse(result));
+      return res
+        .status(result.simulated === true || result.provider === 'mock' ? 202 : 201)
+        .json(notificationResultResponse(result));
     } catch (error) {
       logger.error('Failed to send OTP SMS', { error: error.message });
       return res.status(500).json(errorResponse('Échec SMS OTP', null, 'OTP_SMS_FAILED'));
@@ -808,15 +828,29 @@ class NotificationsController {
 
   async healthCheck(req, res) {
     try {
-      const [emailHealth, smsHealth] = await Promise.all([
+      const [emailStats, emailHealth, smsStats, smsHealth] = await Promise.all([
+        Promise.resolve(emailService.getStats()),
         emailService.healthCheck(),
+        Promise.resolve(smsService.getStats()),
         smsService.healthCheck()
       ]);
 
+      const deliveryMatrix = buildDeliveryMatrix({
+        emailStats,
+        emailHealth,
+        smsStats,
+        smsHealth
+      });
+
       return res.status(200).json(successResponse('Service opérationnel', {
-        email: emailHealth,
-        sms: smsHealth,
-        overall: { healthy: emailHealth.healthy || smsHealth.healthy }
+        email: deliveryMatrix.email,
+        sms: deliveryMatrix.sms,
+        overall: {
+          localDeliveryAvailable: deliveryMatrix.overall.localDeliveryAvailable,
+          anyRealProviderConfigured: deliveryMatrix.overall.anyRealProviderConfigured,
+          anyRealProviderLiveProved: deliveryMatrix.overall.anyRealProviderLiveProved,
+          blockedByMissingLiveProviders: deliveryMatrix.overall.blockedByMissingLiveProviders
+        }
       }));
     } catch (error) {
       logger.error('Health check failed', { error: error.message });
@@ -826,16 +860,26 @@ class NotificationsController {
 
   async getStats(req, res) {
     try {
-      const [emailStats, smsStats, queueStats] = await Promise.all([
+      const [emailStats, emailHealth, smsStats, smsHealth, queueStats] = await Promise.all([
         emailService.getStats(),
+        emailService.healthCheck(),
         smsService.getStats(),
+        smsService.healthCheck(),
         queueService.getQueueStats()
       ]);
+
+      const deliveryMatrix = buildDeliveryMatrix({
+        emailStats,
+        emailHealth,
+        smsStats,
+        smsHealth
+      });
 
       return res.status(200).json(successResponse('Statistiques du service', {
         email: emailStats,
         sms: smsStats,
-        queues: queueStats.stats
+        queues: queueStats.stats,
+        delivery: deliveryMatrix
       }));
     } catch (error) {
       logger.error('Failed to get stats', { error: error.message });

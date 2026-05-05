@@ -36,6 +36,10 @@ function sanitizeProviderValue(value) {
   return normalized;
 }
 
+function isMockSmsDeliveryEnabled() {
+  return String(process.env.MOCK_SMS_DELIVERY || '').trim().toLowerCase() === 'true';
+}
+
 /**
  * Service d'envoi de SMS transactionnels
  * Utilise Twilio + Vonage fallback avec haute disponibilitÃ©
@@ -326,6 +330,27 @@ class SMSService {
           phoneNumber: this.maskPhoneNumber(normalizedPhone)
         });
       }
+    }
+
+    if (isMockSmsDeliveryEnabled()) {
+      const responseTime = Date.now() - startTime;
+      logger.warn('SMS mock - no provider configured', {
+        phoneNumber: this.maskPhoneNumber(normalizedPhone),
+        message: message.substring(0, 50) + '...'
+      });
+      return {
+        success: false,
+        provider: 'mock',
+        messageId: `mock-sms-${Date.now()}`,
+        responseTime,
+        fallback: true,
+        simulated: true,
+        error: 'No real SMS provider configured',
+        details: {
+          message: 'Aucun provider SMS reel n est configure. Livraison simulee uniquement.',
+          attempted_services: ['Twilio', 'Vonage', 'Textbelt', 'Mock']
+        }
+      };
     }
 
     // Aucun service disponible
@@ -839,6 +864,7 @@ class SMSService {
    */
   getStats() {
     return {
+      mockDeliveryEnabled: isMockSmsDeliveryEnabled(),
       providers: {
         twilio: {
           configured: this.twilioConfigured,

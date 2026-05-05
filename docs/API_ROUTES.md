@@ -34,17 +34,70 @@ GET /api/notifications/health
 - **Response**:
 ```json
 {
-  "status": "healthy",
-  "timestamp": "2024-01-25T15:30:00.000Z",
-  "service": "notification-service",
-  "version": "1.0.0",
-  "components": {
-    "email": "healthy",
-    "sms": "healthy",
-    "queue": "healthy"
+  "success": true,
+  "message": "Service opérationnel",
+  "data": {
+    "email": {
+      "status": "mock_only",
+      "configured": false,
+      "mockAvailable": true,
+      "liveProved": false
+    },
+    "sms": {
+      "status": "configured_not_live_proved",
+      "configured": true,
+      "mockAvailable": true,
+      "liveProved": false
+    },
+    "overall": {
+      "localDeliveryAvailable": true,
+      "anyRealProviderConfigured": true,
+      "anyRealProviderLiveProved": false,
+      "blockedByMissingLiveProviders": false
+    }
   }
 }
 ```
+
+### Runtime Readiness
+```
+GET /health/ready
+```
+- **Description**: Vérifie si le runtime local est prêt sans confondre absence de provider live et panne du service
+- **Authentification**: Non requise
+- **Response**:
+```json
+{
+  "status": "ready_with_provider_gaps",
+  "runtimeReady": true,
+  "localDeliveryAvailable": true,
+  "blockedByMissingLiveProviders": true,
+  "checks": {
+    "redis": { "status": "healthy" },
+    "database": { "healthy": true },
+    "delivery": {
+      "email": "mock_only",
+      "sms": "missing_live_provider_credentials",
+      "anyRealProviderConfigured": false,
+      "anyRealProviderLiveProved": false,
+      "anyMockProviderAvailable": true
+    }
+  }
+}
+```
+
+### Provider Matrix
+```
+GET /health/providers
+GET /health/config
+GET /health/components/:component
+```
+- **Description**: Expose l'état détaillé des canaux `email` et `sms` en séparant `mockAvailable`, `configured`, `healthy` et `liveProved`
+- **Authentification**: Non requise
+- **Notes**:
+- `mock_only` : le canal n'a pas de credential live mais un mode mock explicite est disponible
+- `configured_not_live_proved` : des credentials plausibles existent mais aucun check runtime live concluant n'a encore prouvé le provider
+- `live_ready` : au moins un provider live du canal a été validé par un check runtime
 
 ### Service Stats
 ```

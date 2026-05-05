@@ -1,17 +1,28 @@
 const express = require('express');
+
 const router = express.Router();
+
 const emailService = require('../core/email/email.service');
 const smsService = require('../core/sms/sms.service');
 const queueService = require('../core/queues/queue.service');
 const DatabaseBootstrap = require('../services/database-bootstrap.service');
 const { getDatabase } = require('../config/database');
+const {
+  buildDeliveryMatrix,
+  buildReadinessSnapshot,
+  checkRedisConnection,
+} = require('./provider-readiness');
 const logger = require('../utils/logger');
 
 /**
- * Routes de santé pour le Notification Service
+ * Routes de santé pour le Notification Service.
+ * Elles distinguent maintenant:
+ * - le runtime local réellement opérationnel
+ * - les providers mock disponibles
+ * - les providers live configurés
+ * - les providers live déjà prouvés par un check runtime
  */
 
-// GET /health - Health check simple
 router.get('/', async (req, res) => {
   try {
     const healthStatus = {
@@ -20,39 +31,42 @@ router.get('/', async (req, res) => {
       service: 'notification',
       version: process.env.npm_package_version || '1.0.0',
       uptime: process.uptime(),
-      memory: process.memoryUsage()
+      memory: process.memoryUsage(),
     };
 
     res.status(200).json(healthStatus);
   } catch (error) {
     logger.error('Health check failed', {
-      error: error.message
+      error: error.message,
     });
 
     res.status(503).json({
       status: 'unhealthy',
       timestamp: new Date().toISOString(),
-      error: error.message
+      error: error.message,
     });
   }
 });
 
-// GET /health/detailed - Health check détaillé
 router.get('/detailed', async (req, res) => {
   try {
-    const [emailHealth, smsHealth, queueStats, redisHealthy, databaseStatus] = await Promise.all([
-      emailService.healthCheck(),
-      smsService.healthCheck(),
+    const [deliveryMatrix, queueStats, redisStatus, databaseStatus] = await Promise.all([
+      getDeliveryMatrix(),
       queueService.getQueueStats(),
       checkRedisConnection(),
-      checkDatabaseConnection()
+      checkDatabaseConnection(),
     ]);
 
-    const dependenciesHealthy = redisHealthy && databaseStatus.healthy;
-    const serviceStatus = dependenciesHealthy ? 'healthy' : 'degraded';
+    const readiness = buildReadinessSnapshot({
+      databaseStatus,
+      redisStatus,
+      deliveryMatrix,
+    });
+
+    const dependenciesHealthy = redisStatus.healthy && databaseStatus.healthy;
 
     const detailedStatus = {
-      status: serviceStatus,
+      status: dependenciesHealthy ? 'healthy' : 'degraded',
       timestamp: new Date().toISOString(),
       service: 'notification',
       version: process.env.npm_package_version || '1.0.0',
@@ -64,259 +78,282 @@ router.get('/detailed', async (req, res) => {
         platform: process.platform,
         arch: process.arch,
         nodeVersion: process.version,
-        pid: process.pid
+        pid: process.pid,
       },
       dependencies: {
-        redis: redisHealthy,
-        database: databaseStatus
+        redis: redisStatus,
+        database: databaseStatus,
       },
       services: {
-        email: emailHealth,
-        sms: smsHealth,
-        queues: queueStats.stats
+        email: deliveryMatrix.email,
+        sms: deliveryMatrix.sms,
+        queues: queueStats.stats,
       },
       overall: {
-        healthy: dependenciesHealthy && (emailHealth.healthy || smsHealth.healthy),
-        providers: {
-          email: emailHealth.healthy,
-          sms: smsHealth.healthy,
-          queues: Object.values(queueStats.stats).some(q => q.waiting > 0 || q.active > 0)
-        }
-      }
+        runtimeReady: readiness.runtimeReady,
+        readiness: readiness.status,
+        localDeliveryAvailable: readiness.localDeliveryAvailable,
+        blockedByMissingLiveProviders: readiness.blockedByMissingLiveProviders,
+        liveProvidersReady: deliveryMatrix.overall.anyRealProviderLiveProved,
+      },
     };
 
     res.status(dependenciesHealthy ? 200 : 503).json(detailedStatus);
   } catch (error) {
     logger.error('Detailed health check failed', {
-      error: error.message
+      error: error.message,
     });
 
     res.status(503).json({
       status: 'unhealthy',
       timestamp: new Date().toISOString(),
-      error: error.message
+      error: error.message,
     });
   }
 });
 
-// GET /health/ready - Readiness probe
 router.get('/ready', async (req, res) => {
   try {
-    // Vérifier que les dépendances critiques sont prêtes
-    const redisReady = await checkRedisConnection();
-    const databaseReady = await checkDatabaseConnection();
-    
-    // Vérifier qu'au moins un provider de notification est prêt
-    const [emailHealth, smsHealth] = await Promise.all([
-      emailService.healthCheck(),
-      smsService.healthCheck()
+    const [deliveryMatrix, redisStatus, databaseStatus] = await Promise.all([
+      getDeliveryMatrix(),
+      checkRedisConnection(),
+      checkDatabaseConnection(),
     ]);
-    
-    const notificationsReady = emailHealth.healthy || smsHealth.healthy;
-    const isReady = redisReady && databaseReady.healthy && notificationsReady;
-    
+
+    const readiness = buildReadinessSnapshot({
+      databaseStatus,
+      redisStatus,
+      deliveryMatrix,
+    });
+
     const status = {
-      status: isReady ? 'ready' : 'not ready',
+      status: readiness.status,
       timestamp: new Date().toISOString(),
-      dependencies: {
-        redis: redisReady,
-        database: databaseReady.healthy,
-        notifications: notificationsReady
+      runtimeReady: readiness.runtimeReady,
+      localDeliveryAvailable: readiness.localDeliveryAvailable,
+      blockedByMissingLiveProviders: readiness.blockedByMissingLiveProviders,
+      checks: {
+        redis: redisStatus,
+        database: databaseStatus,
+        delivery: {
+          email: deliveryMatrix.email.status,
+          sms: deliveryMatrix.sms.status,
+          anyRealProviderConfigured: deliveryMatrix.overall.anyRealProviderConfigured,
+          anyRealProviderLiveProved: deliveryMatrix.overall.anyRealProviderLiveProved,
+          anyMockProviderAvailable: deliveryMatrix.overall.anyMockProviderAvailable,
+        },
       },
-      providers: {
-        email: emailHealth.healthy,
-        sms: smsHealth.healthy
-      }
     };
 
-    res.status(isReady ? 200 : 503).json(status);
+    res.status(readiness.runtimeReady ? 200 : 503).json(status);
   } catch (error) {
     logger.error('Readiness check failed', {
-      error: error.message
+      error: error.message,
     });
 
     res.status(503).json({
-      status: 'not ready',
+      status: 'not_ready',
       timestamp: new Date().toISOString(),
-      error: error.message
+      error: error.message,
     });
   }
 });
 
-// GET /health/live - Liveness probe
 router.get('/live', (req, res) => {
   try {
-    const livenessStatus = {
+    res.status(200).json({
       status: 'alive',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       pid: process.pid,
-      memory: process.memoryUsage()
-    };
-
-    res.status(200).json(livenessStatus);
+      memory: process.memoryUsage(),
+    });
   } catch (error) {
     logger.error('Liveness check failed', {
-      error: error.message
+      error: error.message,
     });
 
     res.status(503).json({
       status: 'not alive',
       timestamp: new Date().toISOString(),
-      error: error.message
+      error: error.message,
     });
   }
 });
 
-// GET /health/components/:component - Health check d'un composant spécifique
 router.get('/components/:component', async (req, res) => {
   try {
     const { component } = req.params;
-    
-    let result;
-    
-    switch (component) {
-      case 'email':
-        result = await emailService.healthCheck();
-        break;
-      case 'sms':
-        result = await smsService.healthCheck();
-        break;
-      case 'queues':
-        const queueStats = await queueService.getQueueStats();
-        result = {
-          success: true,
-          healthy: true,
-          stats: queueStats.stats
-        };
-        break;
-      case 'redis':
-        const redisStatus = await checkRedisConnection();
-        result = {
-          success: true,
-          healthy: redisStatus,
-          connection: redisStatus ? 'connected' : 'disconnected'
-        };
-        break;
-      case 'database':
-        const dbStatus = await checkDatabaseConnection();
-        result = {
-          success: true,
-          healthy: dbStatus.healthy,
-          connection: dbStatus.connected ? 'connected' : 'disconnected',
-          schemaReady: dbStatus.schemaReady,
-          missingTables: dbStatus.missingTables
-        };
-        break;
-      default:
-        return res.status(404).json({
-          success: false,
-          message: `Component ${component} not found`,
-          available: ['email', 'sms', 'queues', 'redis', 'database']
-        });
+
+    if (component === 'email' || component === 'sms') {
+      const deliveryMatrix = await getDeliveryMatrix();
+      const channel = deliveryMatrix[component];
+      const httpStatus = channel.localDeliveryAvailable ? 200 : 503;
+
+      return res.status(httpStatus).json({
+        success: true,
+        healthy: channel.healthy,
+        liveProved: channel.liveProved,
+        configured: channel.configured,
+        mockAvailable: channel.mockAvailable,
+        localDeliveryAvailable: channel.localDeliveryAvailable,
+        status: channel.status,
+        providers: channel.providers,
+      });
     }
 
-    res.status(result.success && result.healthy ? 200 : 503).json(result);
+    if (component === 'queues') {
+      const queueStats = await queueService.getQueueStats();
+      return res.status(200).json({
+        success: true,
+        healthy: true,
+        stats: queueStats.stats,
+      });
+    }
+
+    if (component === 'redis') {
+      const redisStatus = await checkRedisConnection();
+      return res.status(redisStatus.healthy ? 200 : 503).json({
+        success: true,
+        healthy: redisStatus.healthy,
+        connection: redisStatus.connected ? 'connected' : 'disconnected',
+        status: redisStatus.status,
+        error: redisStatus.error || null,
+      });
+    }
+
+    if (component === 'database') {
+      const dbStatus = await checkDatabaseConnection();
+      return res.status(dbStatus.healthy ? 200 : 503).json({
+        success: true,
+        healthy: dbStatus.healthy,
+        connection: dbStatus.connected ? 'connected' : 'disconnected',
+        schemaReady: dbStatus.schemaReady,
+        missingTables: dbStatus.missingTables,
+        error: dbStatus.error || null,
+      });
+    }
+
+    return res.status(404).json({
+      success: false,
+      message: `Component ${component} not found`,
+      available: ['email', 'sms', 'queues', 'redis', 'database'],
+    });
   } catch (error) {
     logger.error(`Component health check failed for ${req.params.component}`, {
-      error: error.message
+      error: error.message,
     });
 
     res.status(503).json({
       success: false,
       healthy: false,
-      error: error.message
+      error: error.message,
     });
   }
 });
 
-// GET /health/providers - État des providers de notification
 router.get('/providers', async (req, res) => {
   try {
-    const [emailStats, smsStats] = await Promise.all([
-      emailService.getStats(),
-      smsService.getStats()
-    ]);
-
-    const providers = {
-      email: {
-        ...emailStats.providers,
-        configured: emailStats.providers.smtp.configured || emailStats.providers.sendgrid.configured,
-        healthy: emailStats.providers.smtp.configured || emailStats.providers.sendgrid.configured
-      },
-      sms: {
-        ...smsStats.providers,
-        configured:
-          smsStats.providers.twilio.configured ||
-          smsStats.providers.vonage.configured ||
-          smsStats.providers.textbelt.configured,
-        healthy:
-          smsStats.providers.twilio.configured ||
-          smsStats.providers.vonage.configured
-      }
-    };
+    const deliveryMatrix = await getDeliveryMatrix();
 
     res.status(200).json({
       success: true,
-      providers,
-      overall: {
-        email: providers.email.configured,
-        sms: providers.sms.configured,
-        any: providers.email.configured || providers.sms.configured
-      }
+      providers: {
+        email: deliveryMatrix.email,
+        sms: deliveryMatrix.sms,
+      },
+      overall: deliveryMatrix.overall,
     });
   } catch (error) {
     logger.error('Providers health check failed', {
-      error: error.message
+      error: error.message,
     });
 
     res.status(503).json({
       success: false,
-      error: error.message
+      error: error.message,
     });
   }
 });
 
-// GET /health/queues - État des queues
+router.get('/config', async (req, res) => {
+  try {
+    const deliveryMatrix = await getDeliveryMatrix();
+
+    res.status(200).json({
+      success: true,
+      config: {
+        email: {
+          configured: deliveryMatrix.email.configured,
+          liveProved: deliveryMatrix.email.liveProved,
+          mockAvailable: deliveryMatrix.email.mockAvailable,
+          status: deliveryMatrix.email.status,
+        },
+        sms: {
+          configured: deliveryMatrix.sms.configured,
+          liveProved: deliveryMatrix.sms.liveProved,
+          mockAvailable: deliveryMatrix.sms.mockAvailable,
+          status: deliveryMatrix.sms.status,
+        },
+        anyRealProviderConfigured: deliveryMatrix.overall.anyRealProviderConfigured,
+        anyRealProviderLiveProved: deliveryMatrix.overall.anyRealProviderLiveProved,
+        anyMockProviderAvailable: deliveryMatrix.overall.anyMockProviderAvailable,
+        providers: {
+          email: deliveryMatrix.email.providers,
+          sms: deliveryMatrix.sms.providers,
+        },
+      },
+    });
+  } catch (error) {
+    logger.error('Configuration health check failed', {
+      error: error.message,
+    });
+
+    res.status(503).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 router.get('/queues', async (req, res) => {
   try {
     const queueStats = await queueService.getQueueStats();
-    
+
     res.status(200).json({
       success: true,
       stats: queueStats.stats,
       summary: {
-        totalJobs: Object.values(queueStats.stats).reduce((sum, q) => sum + q.total, 0),
-        activeJobs: Object.values(queueStats.stats).reduce((sum, q) => sum + q.active, 0),
-        waitingJobs: Object.values(queueStats.stats).reduce((sum, q) => sum + q.waiting, 0),
-        failedJobs: Object.values(queueStats.stats).reduce((sum, q) => sum + q.failed, 0)
-      }
+        totalJobs: Object.values(queueStats.stats).reduce((sum, queue) => sum + queue.total, 0),
+        activeJobs: Object.values(queueStats.stats).reduce((sum, queue) => sum + queue.active, 0),
+        waitingJobs: Object.values(queueStats.stats).reduce((sum, queue) => sum + queue.waiting, 0),
+        failedJobs: Object.values(queueStats.stats).reduce((sum, queue) => sum + queue.failed, 0),
+      },
     });
   } catch (error) {
     logger.error('Queues health check failed', {
-      error: error.message
+      error: error.message,
     });
 
     res.status(503).json({
       success: false,
-      error: error.message
+      error: error.message,
     });
   }
 });
 
-// POST /health/test - Test de connectivité
 router.post('/test', async (req, res) => {
   try {
     const { component } = req.body;
-    
+
     let result;
-    
+
     switch (component) {
       case 'email':
-        result = await emailService.healthCheck();
+        result = (await getDeliveryMatrix()).email;
         break;
       case 'sms':
-        result = await smsService.testConnectivity();
+        result = (await getDeliveryMatrix()).sms;
         break;
       case 'redis':
         result = await checkRedisConnection();
@@ -327,57 +364,50 @@ router.post('/test', async (req, res) => {
       default:
         return res.status(400).json({
           success: false,
-          message: 'Component must be: email, sms, redis, or database'
+          message: 'Component must be: email, sms, redis, or database',
         });
     }
 
     const testSucceeded =
-      typeof result === 'boolean' ? result : (result.success ?? result.healthy ?? false);
+      typeof result?.healthy === 'boolean'
+        ? result.healthy || result.localDeliveryAvailable === true
+        : false;
 
     res.status(testSucceeded ? 200 : 503).json({
       success: testSucceeded,
       component,
       testedAt: new Date().toISOString(),
-      result
+      result,
     });
   } catch (error) {
     logger.error('Health test failed', {
       error: error.message,
-      component: req.body.component
+      component: req.body.component,
     });
 
     res.status(503).json({
       success: false,
-      error: error.message
+      error: error.message,
     });
   }
 });
 
-/**
- * Vérifie la connexion Redis
- * @returns {Promise<boolean>} True si connecté
- */
-async function checkRedisConnection() {
-  try {
-    // Importer le service Redis si disponible
-    // const redis = require('../config/redis');
-    // await redis.ping();
-    // return true;
-    
-    // Placeholder pour l'instant
-    return true;
-  } catch (error) {
-    logger.error('Redis connection check failed', {
-      error: error.message
-    });
-    return false;
-  }
+async function getDeliveryMatrix() {
+  const [emailStats, emailHealth, smsStats, smsHealth] = await Promise.all([
+    Promise.resolve(emailService.getStats()),
+    emailService.healthCheck(),
+    Promise.resolve(smsService.getStats()),
+    smsService.healthCheck(),
+  ]);
+
+  return buildDeliveryMatrix({
+    emailStats,
+    emailHealth,
+    smsStats,
+    smsHealth,
+  });
 }
 
-/**
- * Vérifie la connexion à la base de données
- * @returns {Promise<boolean>} True si connectée
- */
 async function checkDatabaseConnection() {
   try {
     await getDatabase().query('SELECT 1');
@@ -388,11 +418,11 @@ async function checkDatabaseConnection() {
       healthy: schemaStatus.ready,
       connected: true,
       schemaReady: schemaStatus.ready,
-      missingTables: schemaStatus.missingTables
+      missingTables: schemaStatus.missingTables,
     };
   } catch (error) {
     logger.error('Database connection check failed', {
-      error: error.message
+      error: error.message,
     });
     return {
       success: false,
@@ -400,7 +430,7 @@ async function checkDatabaseConnection() {
       connected: false,
       schemaReady: false,
       missingTables: [],
-      error: error.message
+      error: error.message,
     };
   }
 }

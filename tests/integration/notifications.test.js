@@ -184,7 +184,7 @@ describe('Notifications API Integration Tests', () => {
           }
         });
 
-      expect(response.status).toBe(201);
+      expect([201, 202]).toContain(response.status);
       expect(response.body.success).toBe(true);
       expect(response.body.data).toHaveProperty('provider');
       expect(response.body.data).toHaveProperty('messageId');
@@ -390,7 +390,7 @@ describe('Notifications API Integration Tests', () => {
           userData: testUserData
         });
 
-      expect(response.status).toBe(201);
+      expect([201, 202]).toContain(response.status);
       expect(response.body.success).toBe(true);
     });
 
@@ -402,7 +402,7 @@ describe('Notifications API Integration Tests', () => {
           userData: testUserData
         });
 
-      expect(response.status).toBe(201);
+      expect([201, 202]).toContain(response.status);
       expect(response.body.success).toBe(true);
     });
 
@@ -414,7 +414,7 @@ describe('Notifications API Integration Tests', () => {
           resetToken: 'reset-token-123'
         });
 
-      expect(response.status).toBe(201);
+      expect([201, 202]).toContain(response.status);
       expect(response.body.success).toBe(true);
     });
 
@@ -426,7 +426,7 @@ describe('Notifications API Integration Tests', () => {
           resetCode: '123456'
         });
 
-      expect(response.status).toBe(201);
+      expect([201, 202]).toContain(response.status);
       expect(response.body.success).toBe(true);
     });
 
